@@ -1,0 +1,42 @@
+[project]
+name = "demo-api"
+version = "0.1.0"
+description = "Minimal FastAPI task API, first target repository of FlowForge"
+readme = "README.md"
+authors = [
+    { name = "xgueret", email = "971xavier.gueret@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.142.2",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+demo-api = "demo_api:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "N", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

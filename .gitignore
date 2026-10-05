@@ -1,0 +1,32 @@
+# --- Python / uv ---
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+wheels/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+.envrc.local
+*.pem
+*.key
+
+# --- direnv ---
+.direnv/
+
+# --- Claude Code (local, per-user settings) ---
+.claude/settings.local.json
+
+# --- Editors / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
