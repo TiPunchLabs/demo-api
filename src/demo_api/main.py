@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 
-from demo_api.routes import health, tasks
+from demo_api.routes import health, tasks, version
 from demo_api.storage import TaskStore
 
 
@@ -12,6 +12,7 @@ def create_app() -> FastAPI:
     app.state.task_store = TaskStore()
     app.include_router(health.router)
     app.include_router(tasks.router)
+    app.include_router(version.router)
     return app
 
 
