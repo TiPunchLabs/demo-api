@@ -18,8 +18,14 @@ jobs:
     uses: TiPunchLabs/flowforge/.github/workflows/agent-develop.yml@main
     # Must cover what the called workflow requests; it can only narrow, never widen.
     permissions:
-      contents: read
-      issues: read
+      contents: write
+      issues: write
+      pull-requests: write
     with:
       issue_number: ${{ github.event.issue.number }}
       base_branch: ${{ github.event.repository.default_branch }}
+      setup_uv: true
+      allowed_tools: "Bash(uv sync:*),Bash(uv run pytest:*),Bash(uv run ruff:*),Bash(uv run pre-commit:*)"
+    # Organization secret (Selected repositories). Explicit contract: never `secrets: inherit`.
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
