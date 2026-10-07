@@ -1,5 +1,9 @@
 """demo-api: minimal FastAPI service used as the first FlowForge target."""
 
+from importlib.metadata import version
+
+__version__ = version("demo-api")
+
 
 def main() -> None:
     """Run the development server (entry point of the `demo-api` script)."""
