@@ -58,9 +58,10 @@ tests/
 | POST | `/tasks` | 201 created task | 422 invalid payload |
 | GET | `/tasks/{id}` | 200 task | 404 |
 | PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
+| PATCH | `/tasks/{id}` | 200 partially updated task | 404, 422 (empty body, unknown field, `null`, invalid value) |
 | DELETE | `/tasks/{id}` | 204 empty body | 404 |
 
-Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false}`.
+Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false, "priority": "low"|"medium"|"high" = "medium"}`.
 
 ## Commands
 

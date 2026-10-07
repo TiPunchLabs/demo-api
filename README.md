@@ -24,9 +24,14 @@ curl localhost:8000/health
 curl -X POST localhost:8000/tasks -H 'content-type: application/json' -d '{"title": "Example"}'
 curl localhost:8000/tasks
 curl localhost:8000/tasks/1
-curl -X PUT localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"title": "Example", "completed": true}'
+curl -X PUT localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"title": "Example", "completed": true, "priority": "high"}'
+curl -X PATCH localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"priority": "low"}'
 curl -X DELETE localhost:8000/tasks/1
 ```
+
+Tasks have a `priority` (`"low"`, `"medium"` or `"high"`, default `"medium"`), accepted by
+`POST` and `PUT`. `PATCH /tasks/{id}` updates only the fields present in the body
+(`title`, `completed`, `priority`); an empty body, an unknown field or a `null` value answers 422.
 
 ## Development
 
