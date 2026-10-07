@@ -19,6 +19,20 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 
 ## API
 
+| Method | Path | Success | Errors |
+|---|---|---|---|
+| GET | `/health` | 200 `{"status": "ok"}` | — |
+| GET | `/version` | 200 `{"version": str}` | — |
+| GET | `/tasks` | 200 list of tasks | — |
+| POST | `/tasks` | 201 created task | 422 invalid payload |
+| GET | `/tasks/{id}` | 200 task | 404 |
+| PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
+| DELETE | `/tasks/{id}` | 204 empty body | 404 |
+
+Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false}`.
+
+Examples:
+
 ```bash
 curl localhost:8000/health
 curl -X POST localhost:8000/tasks -H 'content-type: application/json' -d '{"title": "Example"}'
