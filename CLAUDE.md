@@ -22,7 +22,7 @@ and open Draft PRs here. Keep it small, readable and fully tested.
 ## Architecture
 
 ```
-HTTP ─► routes/*.py (APIRouter) ─► TaskStore (in-memory dict) ─► Task (Pydantic)
+HTTP ─► routes/*.py (APIRouter) ─► TaskStore (in-memory dict, atomic bulk create) ─► Task (Pydantic)
               ▲                          ▲
        main.create_app() ──── attaches a fresh store to app.state
 ```
@@ -56,6 +56,9 @@ tests/
 | GET | `/health` | 200 `{"status": "ok"}` | — |
 | GET | `/tasks` | 200 list of tasks | — |
 | POST | `/tasks` | 201 created task | 422 invalid payload |
+| GET | `/tasks/stats` | 200 `{"total", "completed", "pending"}` | — |
+| POST | `/tasks/bulk` | 201 list of created tasks (1–50, atomic) | 422 |
+| DELETE | `/tasks?completed=true` | 200 `{"deleted": n}` | 422 if `completed` missing or not `true` |
 | GET | `/tasks/{id}` | 200 task | 404 |
 | PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
 | DELETE | `/tasks/{id}` | 204 empty body | 404 |

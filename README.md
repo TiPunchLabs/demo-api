@@ -26,6 +26,9 @@ curl localhost:8000/tasks
 curl localhost:8000/tasks/1
 curl -X PUT localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"title": "Example", "completed": true}'
 curl -X DELETE localhost:8000/tasks/1
+curl localhost:8000/tasks/stats                     # {"total": 3, "completed": 1, "pending": 2}
+curl -X POST localhost:8000/tasks/bulk -H 'content-type: application/json' -d '{"tasks": [{"title": "A"}, {"title": "B"}]}'
+curl -X DELETE 'localhost:8000/tasks?completed=true'  # {"deleted": <n>}
 ```
 
 ## Development

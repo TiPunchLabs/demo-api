@@ -14,3 +14,23 @@ class Task(TaskIn):
     """A stored task."""
 
     id: int
+
+
+class TaskBulkIn(BaseModel):
+    """Payload to create several tasks at once."""
+
+    tasks: list[TaskIn] = Field(min_length=1, max_length=50)
+
+
+class TaskStats(BaseModel):
+    """Task counters."""
+
+    total: int
+    completed: int
+    pending: int
+
+
+class DeletedCount(BaseModel):
+    """Result of a bulk deletion."""
+
+    deleted: int

@@ -1,6 +1,8 @@
 """In-memory task storage (not persistent, not shared between processes)."""
 
-from demo_api.schemas import Task, TaskIn
+from __future__ import annotations
+
+from demo_api.schemas import Task, TaskIn, TaskStats
 
 
 class TaskStore:
@@ -25,6 +27,30 @@ class TaskStore:
         self._tasks[task.id] = task
         self._next_id += 1
         return task
+
+    def create_many(self, items: list[TaskIn]) -> list[Task]:
+        """Store several tasks atomically: all are created, or none is."""
+        tasks = [
+            Task(id=self._next_id + offset, **TaskIn.model_validate(item.model_dump()).model_dump())
+            for offset, item in enumerate(items)
+        ]
+        for task in tasks:
+            self._tasks[task.id] = task
+        self._next_id += len(tasks)
+        return tasks
+
+    def stats(self) -> TaskStats:
+        """Return the total, completed and pending task counts."""
+        total = len(self._tasks)
+        completed = sum(task.completed for task in self._tasks.values())
+        return TaskStats(total=total, completed=completed, pending=total - completed)
+
+    def delete_completed(self) -> int:
+        """Delete all completed tasks and return how many were removed."""
+        ids = [task.id for task in self._tasks.values() if task.completed]
+        for task_id in ids:
+            del self._tasks[task_id]
+        return len(ids)
 
     def replace(self, task_id: int, data: TaskIn) -> Task | None:
         """Replace an existing task; return None if it does not exist."""
