@@ -1,5 +1,7 @@
 """Tests for the /tasks CRUD."""
 
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -78,3 +80,77 @@ def test_unknown_task_returns_404(client: TestClient, method: str, body: dict | 
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Task 999 not found"}
+
+
+def _seed(client: TestClient) -> None:
+    """Create 5 tasks where tasks 2 and 4 are completed."""
+    for index in range(1, 6):
+        task = _create(client, f"task {index}")
+        if index % 2 == 0:
+            client.put(f"/tasks/{task['id']}", json={"title": task["title"], "completed": True})
+
+
+def _ids(response: Any) -> list[int]:
+    """Return the ids of a list response."""
+    return [task["id"] for task in response.json()]
+
+
+def test_list_defaults_to_twenty_sorted_by_id(client: TestClient) -> None:
+    """Without parameters, at most 20 tasks are returned, sorted by id."""
+    for index in range(25):
+        _create(client, f"task {index}")
+
+    response = client.get("/tasks")
+
+    assert response.status_code == 200
+    assert _ids(response) == list(range(1, 21))
+
+
+def test_list_filters_completed_true(client: TestClient) -> None:
+    """completed=true returns only completed tasks."""
+    _seed(client)
+
+    assert _ids(client.get("/tasks", params={"completed": "true"})) == [2, 4]
+
+
+def test_list_filters_completed_false(client: TestClient) -> None:
+    """completed=false returns only pending tasks."""
+    _seed(client)
+
+    assert _ids(client.get("/tasks", params={"completed": "false"})) == [1, 3, 5]
+
+
+def test_list_limit_and_offset(client: TestClient) -> None:
+    """Limit and offset paginate the sorted list."""
+    _seed(client)
+
+    assert _ids(client.get("/tasks", params={"limit": 2})) == [1, 2]
+    assert _ids(client.get("/tasks", params={"limit": 2, "offset": 2})) == [3, 4]
+    assert _ids(client.get("/tasks", params={"offset": 4})) == [5]
+
+
+def test_list_pagination_applies_after_filter(client: TestClient) -> None:
+    """The completed filter is applied before limit and offset."""
+    _seed(client)
+
+    params = {"completed": "false", "limit": 2, "offset": 1}
+    assert _ids(client.get("/tasks", params=params)) == [3, 5]
+
+
+def test_list_offset_beyond_count_returns_empty(client: TestClient) -> None:
+    """An offset past the last task returns an empty list with 200."""
+    _seed(client)
+
+    response = client.get("/tasks", params={"offset": 50})
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.parametrize(
+    "params",
+    [{"limit": 0}, {"limit": 101}, {"offset": -1}, {"completed": "abc"}],
+)
+def test_list_rejects_invalid_query(client: TestClient, params: dict) -> None:
+    """Out-of-range or malformed query parameters answer 422."""
+    assert client.get("/tasks", params=params).status_code == 422

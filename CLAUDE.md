@@ -54,7 +54,7 @@ tests/
 | Method | Path | Success | Errors |
 |---|---|---|---|
 | GET | `/health` | 200 `{"status": "ok"}` | — |
-| GET | `/tasks` | 200 list of tasks | — |
+| GET | `/tasks?completed=&limit=20&offset=0` | 200 list of tasks sorted by id; `completed` (bool, optional) filters before pagination, `limit` 1–100 (default 20), `offset` ≥ 0 (default 0) | 422 invalid query parameter |
 | POST | `/tasks` | 201 created task | 422 invalid payload |
 | GET | `/tasks/{id}` | 200 task | 404 |
 | PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
