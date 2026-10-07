@@ -53,6 +53,15 @@ def replace_task(task_id: int, data: TaskIn, store: Store) -> Task:
     return task
 
 
+@router.post("/{task_id}/toggle")
+def toggle_task(task_id: int, store: Store) -> Task:
+    """Invert a task's completion state."""
+    task = store.get(task_id)
+    if task is None:
+        raise _not_found(task_id)
+    return store.replace(task_id, TaskIn(title=task.title, completed=not task.completed))
+
+
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id: int, store: Store) -> Response:
     """Delete a task."""

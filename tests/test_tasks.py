@@ -68,6 +68,16 @@ def test_delete_task(client: TestClient) -> None:
     assert client.get("/tasks").json() == []
 
 
+def test_toggle_task(client: TestClient) -> None:
+    """Toggling a task inverts its completion state."""
+    task = _create(client)
+
+    response = client.post(f"/tasks/{task['id']}/toggle")
+
+    assert response.status_code == 200
+    assert response.json()["completed"] is True
+
+
 @pytest.mark.parametrize(
     ("method", "body"),
     [("get", None), ("put", {"title": "x"}), ("delete", None)],
