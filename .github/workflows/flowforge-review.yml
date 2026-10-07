@@ -46,7 +46,7 @@ jobs:
       checks: read
       statuses: read
     with:
-      pull_request_number: ${{ inputs.pull_request_number || github.event.pull_request.number }}
+      pull_request_number: ${{ fromJSON(inputs.pull_request_number || github.event.pull_request.number) }}
       setup_uv: true
       # NON-DESTRUCTIVE checks only, as exact rules: a prefix rule such as
       # "Bash(uv run ruff check:*)" would also allow --fix.
