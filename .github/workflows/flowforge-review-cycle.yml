@@ -1,0 +1,50 @@
+# Hands one pull request to the FlowForge review cycle: the bounded Reviewer <-> Iterator
+# loop (at most 3 Iterator passes, then a final Reviewer).
+#
+# No agent logic lives here: everything is in the FlowForge reusable workflow.
+# `@main` is a POC reference (FlowForge has no tag yet); pin to a tag or commit SHA
+# once FlowForge publishes releases.
+#
+# Trigger: workflow_dispatch only, started by a human for one Draft PR:
+#   gh workflow run flowforge-review-cycle.yml -f pull_request_number=<n>
+# No `pull_request` / `push` trigger on purpose: one cycle owns the whole Reviewer <->
+# Iterator sequence, and an Iterator push must never start a second, parallel cycle.
+# One active cycle per PR is enforced by review-cycle.yml (concurrency group
+# flowforge-review-cycle-<repository>-<pr>); do not reuse that group name here.
+# Do not dispatch flowforge-review.yml on the same PR while a cycle runs.
+name: FlowForge review cycle
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Pull request to review and iterate on
+        type: number
+        required: true
+
+permissions: {}
+
+jobs:
+  review-cycle:
+    uses: TiPunchLabs/flowforge/.github/workflows/review-cycle.yml@main
+    # Union of what the Reviewer and the Iterator request; each called job narrows it.
+    #   contents: write        Iterator push job only (verified fast-forward to the PR branch)
+    #   pull-requests: write   Reviewer publish job only (its single PR comment)
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: write
+      checks: read
+      statuses: read
+    with:
+      # fromJSON: workflow_dispatch inputs reach `inputs` as strings; the input is a number.
+      pull_request_number: ${{ fromJSON(inputs.pull_request_number) }}
+      max_iterations: 3
+      setup_uv: true
+      # Reviewer: NON-DESTRUCTIVE checks only, as exact rules (a prefix rule such as
+      # "Bash(uv run ruff check:*)" would also allow --fix).
+      review_allowed_tools: "Bash(uv sync --locked),Bash(uv run pytest:*),Bash(uv run ruff check .),Bash(uv run ruff format --check .)"
+      iterate_allowed_tools: "Bash(uv sync --locked),Bash(uv run pytest:*),Bash(uv run ruff check:*),Bash(uv run ruff format:*)"
+    # Organization secret (Selected repositories). Explicit contract: never `secrets: inherit`.
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
