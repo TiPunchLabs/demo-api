@@ -27,6 +27,7 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 | POST | `/tasks` | 201 created task | 422 invalid payload |
 | GET | `/tasks/{id}` | 200 task | 404 |
 | PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
+| POST | `/tasks/{id}/toggle` | 200 task with `completed` inverted | 404 |
 | DELETE | `/tasks/{id}` | 204 empty body | 404 |
 
 Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false}`.
@@ -39,6 +40,7 @@ curl -X POST localhost:8000/tasks -H 'content-type: application/json' -d '{"titl
 curl localhost:8000/tasks
 curl localhost:8000/tasks/1
 curl -X PUT localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"title": "Example", "completed": true}'
+curl -X POST localhost:8000/tasks/1/toggle
 curl -X DELETE localhost:8000/tasks/1
 ```
 
