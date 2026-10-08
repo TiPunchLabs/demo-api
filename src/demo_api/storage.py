@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from demo_api.schemas import Task, TaskIn, TaskStats
+from demo_api.schemas import Task, TaskIn, TaskPatch, TaskStats
 
 
 class TaskStore:
@@ -59,6 +59,15 @@ class TaskStore:
         task = Task(id=task_id, **data.model_dump())
         self._tasks[task_id] = task
         return task
+
+    def patch(self, task_id: int, data: TaskPatch) -> Task | None:
+        """Update only the provided fields; return None if the task does not exist."""
+        task = self._tasks.get(task_id)
+        if task is None:
+            return None
+        updated = task.model_copy(update=data.model_dump(exclude_unset=True))
+        self._tasks[task_id] = updated
+        return updated
 
     def delete(self, task_id: int) -> bool:
         """Delete a task; return False if it does not exist."""

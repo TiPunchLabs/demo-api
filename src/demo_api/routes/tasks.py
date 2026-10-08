@@ -2,9 +2,9 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from demo_api.schemas import DeletedCount, Task, TaskBulkIn, TaskIn, TaskStats
+from demo_api.schemas import DeletedCount, Task, TaskBulkIn, TaskIn, TaskPatch, TaskStats
 from demo_api.storage import TaskStore
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -24,9 +24,17 @@ def _not_found(task_id: int) -> HTTPException:
 
 
 @router.get("")
-def list_tasks(store: Store) -> list[Task]:
-    """List all tasks."""
-    return store.list()
+def list_tasks(
+    store: Store,
+    completed: bool | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[Task]:
+    """List tasks sorted by id, optionally filtered by completion, then paginated."""
+    tasks = sorted(store.list(), key=lambda task: task.id)
+    if completed is not None:
+        tasks = [task for task in tasks if task.completed == completed]
+    return tasks[offset : offset + limit]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -69,11 +77,31 @@ def get_task(task_id: int, store: Store) -> Task:
 
 @router.put("/{task_id}")
 def replace_task(task_id: int, data: TaskIn, store: Store) -> Task:
-    """Replace a task's title and completion state."""
+    """Replace a task's title, completion state and priority."""
     task = store.replace(task_id, data)
     if task is None:
         raise _not_found(task_id)
     return task
+
+
+@router.patch("/{task_id}")
+def patch_task(task_id: int, data: TaskPatch, store: Store) -> Task:
+    """Partially update a task: only the fields present in the body change."""
+    task = store.patch(task_id, data)
+    if task is None:
+        raise _not_found(task_id)
+    return task
+
+
+@router.post("/{task_id}/toggle")
+def toggle_task(task_id: int, store: Store) -> Task:
+    """Invert a task's completion state."""
+    task = store.get(task_id)
+    if task is None:
+        raise _not_found(task_id)
+    return store.replace(
+        task_id, TaskIn(title=task.title, completed=not task.completed, priority=task.priority)
+    )
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)

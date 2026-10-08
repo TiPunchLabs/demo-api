@@ -51,19 +51,8 @@ tests/
 
 ## API
 
-| Method | Path | Success | Errors |
-|---|---|---|---|
-| GET | `/health` | 200 `{"status": "ok"}` | — |
-| GET | `/tasks` | 200 list of tasks | — |
-| POST | `/tasks` | 201 created task | 422 invalid payload |
-| GET | `/tasks/stats` | 200 `{"total", "completed", "pending"}` | — |
-| POST | `/tasks/bulk` | 201 list of created tasks (1–50, atomic) | 422 |
-| DELETE | `/tasks?completed=true` | 200 `{"deleted": n}` | 422 if `completed` missing or not `true` |
-| GET | `/tasks/{id}` | 200 task | 404 |
-| PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
-| DELETE | `/tasks/{id}` | 204 empty body | 404 |
-
-Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false}`.
+The API reference (endpoints, payloads, status codes) lives in the `## API` section of
+`README.md`. This file only holds instructions for agents: never document endpoints here.
 
 ## Commands
 
@@ -95,7 +84,8 @@ uv run pre-commit run --all-files        # all hooks
 - Full type hints; a short docstring on every module, class and function (Ruff `D`, Google style).
   No obvious inline comments.
 - New endpoint → new or existing module under `routes/`, registered in `create_app()`,
-  with tests in `tests/test_<router>.py` covering success and error cases (404/422).
+  with tests in `tests/test_<router>.py` covering success and error cases (404/422),
+  and documented in the `## API` section of `README.md`.
 - Tests use the `client` fixture; never rely on state left by another test.
 - Dependencies: `uv add <pkg>` / `uv add --dev <pkg>`; commit `uv.lock`. Never edit it by hand.
 - Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`…).
