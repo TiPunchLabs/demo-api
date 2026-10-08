@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from demo_api.schemas import Task, TaskIn
 from demo_api.storage import TaskStore
@@ -24,9 +24,17 @@ def _not_found(task_id: int) -> HTTPException:
 
 
 @router.get("")
-def list_tasks(store: Store) -> list[Task]:
-    """List all tasks."""
-    return store.list()
+def list_tasks(
+    store: Store,
+    completed: bool | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[Task]:
+    """List tasks sorted by id, optionally filtered by completion, then paginated."""
+    tasks = sorted(store.list(), key=lambda task: task.id)
+    if completed is not None:
+        tasks = [task for task in tasks if task.completed == completed]
+    return tasks[offset : offset + limit]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
