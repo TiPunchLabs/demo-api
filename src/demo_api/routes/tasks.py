@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from demo_api.schemas import Task, TaskIn
+from demo_api.schemas import Task, TaskIn, TaskPatch
 from demo_api.storage import TaskStore
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -54,8 +54,17 @@ def get_task(task_id: int, store: Store) -> Task:
 
 @router.put("/{task_id}")
 def replace_task(task_id: int, data: TaskIn, store: Store) -> Task:
-    """Replace a task's title and completion state."""
+    """Replace a task's title, completion state and priority."""
     task = store.replace(task_id, data)
+    if task is None:
+        raise _not_found(task_id)
+    return task
+
+
+@router.patch("/{task_id}")
+def patch_task(task_id: int, data: TaskPatch, store: Store) -> Task:
+    """Partially update a task: only the fields present in the body change."""
+    task = store.patch(task_id, data)
     if task is None:
         raise _not_found(task_id)
     return task
@@ -67,7 +76,9 @@ def toggle_task(task_id: int, store: Store) -> Task:
     task = store.get(task_id)
     if task is None:
         raise _not_found(task_id)
-    return store.replace(task_id, TaskIn(title=task.title, completed=not task.completed))
+    return store.replace(
+        task_id, TaskIn(title=task.title, completed=not task.completed, priority=task.priority)
+    )
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -27,10 +27,11 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 | POST | `/tasks` | 201 created task | 422 invalid payload |
 | GET | `/tasks/{id}` | 200 task | 404 |
 | PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
+| PATCH | `/tasks/{id}` | 200 partially updated task | 404, 422 (empty body, unknown field, `null`, invalid value) |
 | POST | `/tasks/{id}/toggle` | 200 task with `completed` inverted | 404 |
 | DELETE | `/tasks/{id}` | 204 empty body | 404 |
 
-Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false}`.
+Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false, "priority": "low"|"medium"|"high" = "medium"}`.
 
 Examples:
 
@@ -40,10 +41,15 @@ curl -X POST localhost:8000/tasks -H 'content-type: application/json' -d '{"titl
 curl localhost:8000/tasks
 curl 'localhost:8000/tasks?completed=true&limit=10&offset=0'
 curl localhost:8000/tasks/1
-curl -X PUT localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"title": "Example", "completed": true}'
+curl -X PUT localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"title": "Example", "completed": true, "priority": "high"}'
+curl -X PATCH localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"priority": "low"}'
 curl -X POST localhost:8000/tasks/1/toggle
 curl -X DELETE localhost:8000/tasks/1
 ```
+
+Tasks have a `priority` (`"low"`, `"medium"` or `"high"`, default `"medium"`), accepted by
+`POST` and `PUT`. `PATCH /tasks/{id}` updates only the fields present in the body
+(`title`, `completed`, `priority`); an empty body, an unknown field or a `null` value answers 422.
 
 `GET /tasks` returns tasks sorted by id and accepts optional query parameters:
 

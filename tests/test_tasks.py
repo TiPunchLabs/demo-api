@@ -23,7 +23,12 @@ def test_list_is_empty_initially(client: TestClient) -> None:
 
 def test_create_task(client: TestClient) -> None:
     """Creating a task assigns an id and defaults completed to false."""
-    assert _create(client) == {"id": 1, "title": "Example", "completed": False}
+    assert _create(client) == {
+        "id": 1,
+        "title": "Example",
+        "completed": False,
+        "priority": "medium",
+    }
 
 
 def test_create_assigns_incremental_ids(client: TestClient) -> None:
@@ -54,7 +59,12 @@ def test_update_task(client: TestClient) -> None:
     response = client.put(f"/tasks/{task['id']}", json={"title": "Done", "completed": True})
 
     assert response.status_code == 200
-    assert response.json() == {"id": task["id"], "title": "Done", "completed": True}
+    assert response.json() == {
+        "id": task["id"],
+        "title": "Done",
+        "completed": True,
+        "priority": "medium",
+    }
     assert client.get(f"/tasks/{task['id']}").json()["completed"] is True
 
 
@@ -77,7 +87,21 @@ def test_toggle_task(client: TestClient) -> None:
     response = client.post(f"/tasks/{task['id']}/toggle")
 
     assert response.status_code == 200
-    assert response.json() == {"id": task["id"], "title": task["title"], "completed": True}
+    assert response.json() == {
+        "id": task["id"],
+        "title": task["title"],
+        "completed": True,
+        "priority": "medium",
+    }
+
+
+def test_toggle_task_keeps_priority(client: TestClient) -> None:
+    """Toggling a task does not reset its priority."""
+    task = client.post("/tasks", json={"title": "a", "priority": "high"}).json()
+
+    response = client.post(f"/tasks/{task['id']}/toggle")
+
+    assert response.json() == {**task, "completed": True}
 
 
 def test_toggle_task_twice_restores_state(client: TestClient) -> None:
@@ -96,6 +120,7 @@ def test_toggle_task_twice_restores_state(client: TestClient) -> None:
     [
         ("get", "/tasks/999", None),
         ("put", "/tasks/999", {"title": "x"}),
+        ("patch", "/tasks/999", {"title": "x"}),
         ("delete", "/tasks/999", None),
         ("post", "/tasks/999/toggle", None),
     ],
@@ -103,11 +128,79 @@ def test_toggle_task_twice_restores_state(client: TestClient) -> None:
 def test_unknown_task_returns_404(
     client: TestClient, method: str, path: str, body: dict | None
 ) -> None:
-    """Reading, updating, deleting or toggling a missing task answers 404."""
+    """Reading, updating, patching, deleting or toggling a missing task answers 404."""
     response = client.request(method, path, json=body)
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Task 999 not found"}
+
+
+def test_create_and_replace_accept_priority(client: TestClient) -> None:
+    """POST and PUT accept an explicit priority, defaulting to medium."""
+    created = client.post("/tasks", json={"title": "a", "priority": "high"}).json()
+    assert created["priority"] == "high"
+
+    replaced = client.put(f"/tasks/{created['id']}", json={"title": "a", "priority": "low"})
+    assert replaced.json()["priority"] == "low"
+
+    defaulted = client.put(f"/tasks/{created['id']}", json={"title": "a"})
+    assert defaulted.json()["priority"] == "medium"
+
+
+@pytest.mark.parametrize("method", ["post", "put"])
+def test_invalid_priority_rejected(client: TestClient, method: str) -> None:
+    """An unknown priority is rejected on POST and PUT."""
+    task = _create(client)
+    url = "/tasks" if method == "post" else f"/tasks/{task['id']}"
+
+    response = client.request(method, url, json={"title": "x", "priority": "urgent"})
+
+    assert response.status_code == 422
+
+
+def test_patch_updates_provided_fields(client: TestClient) -> None:
+    """PATCH with several valid fields returns the full updated task."""
+    task = _create(client)
+
+    response = client.patch(
+        f"/tasks/{task['id']}", json={"title": "New", "completed": True, "priority": "high"}
+    )
+
+    assert response.status_code == 200
+    expected = {"id": task["id"], "title": "New", "completed": True, "priority": "high"}
+    assert response.json() == expected
+    assert client.get(f"/tasks/{task['id']}").json() == expected
+
+
+def test_patch_keeps_absent_fields(client: TestClient) -> None:
+    """Fields missing from the PATCH body keep their value."""
+    body = {"title": "Keep", "completed": True, "priority": "low"}
+    task = client.post("/tasks", json=body).json()
+
+    response = client.patch(f"/tasks/{task['id']}", json={"priority": "high"})
+
+    assert response.json() == {**task, "priority": "high"}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"foo": 1},
+        {"title": None},
+        {"completed": None},
+        {"priority": None},
+        {"title": ""},
+        {"title": "x" * 201},
+        {"priority": "urgent"},
+    ],
+)
+def test_patch_rejects_invalid_payload(client: TestClient, payload: dict) -> None:
+    """Empty, unknown, null or invalid PATCH bodies answer 422 and change nothing."""
+    task = _create(client)
+
+    assert client.patch(f"/tasks/{task['id']}", json=payload).status_code == 422
+    assert client.get(f"/tasks/{task['id']}").json() == task
 
 
 def _seed(client: TestClient) -> None:
