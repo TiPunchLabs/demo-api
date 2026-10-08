@@ -1,0 +1,31 @@
+# Moves the Issue linked to a closed `agent/*` pull request to its FlowForge terminal state:
+# merged -> agent:done, closed without merge -> no FlowForge state label.
+#
+# No agent logic lives here: everything is in the FlowForge reusable workflow.
+# `@main` is a POC reference (FlowForge has no tag yet); pin to a tag or commit SHA
+# once FlowForge publishes releases.
+#
+# The merge itself stays a human action: this workflow only runs after it. Forks and
+# non-`agent/*` branches are ignored. No secret: no agent runs.
+name: FlowForge lifecycle
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions: {}
+
+jobs:
+  lifecycle:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository
+      && startsWith(github.event.pull_request.head.ref, 'agent/')
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-lifecycle.yml@main
+    # Must cover what the called workflow requests; it can only narrow, never widen.
+    #   issues: write   linked Issue -> agent:done (or no FlowForge state)
+    permissions:
+      issues: write
+      pull-requests: read
+    with:
+      pull_request_number: ${{ github.event.pull_request.number }}
