@@ -22,7 +22,7 @@ and open Draft PRs here. Keep it small, readable and fully tested.
 ## Architecture
 
 ```
-HTTP ─► routes/*.py (APIRouter) ─► TaskStore (in-memory dict) ─► Task (Pydantic)
+HTTP ─► routes/*.py (APIRouter) ─► TaskStore (in-memory dict, atomic bulk create) ─► Task (Pydantic)
               ▲                          ▲
        main.create_app() ──── attaches a fresh store to app.state
 ```

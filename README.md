@@ -25,6 +25,9 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 | GET | `/version` | 200 `{"version": str}` | — |
 | GET | `/tasks` | 200 list of tasks (filtered, paginated: see below) | 422 invalid query parameter |
 | POST | `/tasks` | 201 created task | 422 invalid payload |
+| GET | `/tasks/stats` | 200 `{"total", "completed", "pending"}` | — |
+| POST | `/tasks/bulk` | 201 list of created tasks (1–50, atomic) | 422 |
+| DELETE | `/tasks?completed=true` | 200 `{"deleted": n}` | 422 if `completed` missing or not `true` |
 | GET | `/tasks/{id}` | 200 task | 404 |
 | PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
 | PATCH | `/tasks/{id}` | 200 partially updated task | 404, 422 (empty body, unknown field, `null`, invalid value) |
@@ -45,6 +48,9 @@ curl -X PUT localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"tit
 curl -X PATCH localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"priority": "low"}'
 curl -X POST localhost:8000/tasks/1/toggle
 curl -X DELETE localhost:8000/tasks/1
+curl localhost:8000/tasks/stats                     # {"total": 3, "completed": 1, "pending": 2}
+curl -X POST localhost:8000/tasks/bulk -H 'content-type: application/json' -d '{"tasks": [{"title": "A"}, {"title": "B"}]}'
+curl -X DELETE 'localhost:8000/tasks?completed=true'  # {"deleted": <n>}
 ```
 
 Tasks have a `priority` (`"low"`, `"medium"` or `"high"`, default `"medium"`), accepted by
@@ -61,6 +67,11 @@ Tasks have a `priority` (`"low"`, `"medium"` or `"high"`, default `"medium"`), a
 
 The `completed` filter is applied before pagination. An `offset` past the last task
 returns `[]` (200); invalid values return 422.
+
+`POST /tasks/bulk` takes `{"tasks": [<task>, ...]}` (1 to 50 tasks) and is atomic: if one
+task is invalid, it answers 422 and creates nothing. Created tasks keep the request order
+and get consecutive ids. `DELETE /tasks` only deletes completed tasks and requires
+`completed=true`; without it, or with `completed=false`, it answers 422 and deletes nothing.
 
 ## Development
 
