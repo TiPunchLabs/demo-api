@@ -68,13 +68,41 @@ def test_delete_task(client: TestClient) -> None:
     assert client.get("/tasks").json() == []
 
 
+def test_toggle_task(client: TestClient) -> None:
+    """Toggling a task inverts its completion state."""
+    task = _create(client)
+
+    response = client.post(f"/tasks/{task['id']}/toggle")
+
+    assert response.status_code == 200
+    assert response.json() == {"id": task["id"], "title": task["title"], "completed": True}
+
+
+def test_toggle_task_twice_restores_state(client: TestClient) -> None:
+    """Toggling twice returns completed to its initial value."""
+    task = _create(client)
+
+    client.post(f"/tasks/{task['id']}/toggle")
+    response = client.post(f"/tasks/{task['id']}/toggle")
+
+    assert response.status_code == 200
+    assert response.json() == task
+
+
 @pytest.mark.parametrize(
-    ("method", "body"),
-    [("get", None), ("put", {"title": "x"}), ("delete", None)],
+    ("method", "path", "body"),
+    [
+        ("get", "/tasks/999", None),
+        ("put", "/tasks/999", {"title": "x"}),
+        ("delete", "/tasks/999", None),
+        ("post", "/tasks/999/toggle", None),
+    ],
 )
-def test_unknown_task_returns_404(client: TestClient, method: str, body: dict | None) -> None:
-    """Reading, updating or deleting a missing task answers 404."""
-    response = client.request(method, "/tasks/999", json=body)
+def test_unknown_task_returns_404(
+    client: TestClient, method: str, path: str, body: dict | None
+) -> None:
+    """Reading, updating, deleting or toggling a missing task answers 404."""
+    response = client.request(method, path, json=body)
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Task 999 not found"}
