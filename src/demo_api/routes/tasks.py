@@ -108,6 +108,8 @@ def toggle_task(task_id: int, store: Store) -> Task:
 def duplicate_task(task_id: int, store: Store) -> Task:
     """Create a pending copy of a task."""
     task = store.get(task_id)
+    if task is None:
+        raise _not_found(task_id)
     return store.create(TaskIn(title=task.title, priority=task.priority))
 
 

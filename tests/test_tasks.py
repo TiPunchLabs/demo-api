@@ -123,6 +123,34 @@ def test_duplicate_task(client: TestClient) -> None:
     }
 
 
+def test_duplicate_completed_task_is_pending(client: TestClient) -> None:
+    """Duplicating a completed task yields a non-completed copy."""
+    task = client.post("/tasks", json={"title": "a", "completed": True}).json()
+
+    response = client.post(f"/tasks/{task['id']}/duplicate")
+
+    assert response.status_code == 201
+    assert response.json()["completed"] is False
+
+
+def test_duplicate_leaves_source_unchanged(client: TestClient) -> None:
+    """Duplicating a task does not modify the source."""
+    task = client.post("/tasks", json={"title": "a", "completed": True}).json()
+
+    client.post(f"/tasks/{task['id']}/duplicate")
+
+    assert client.get(f"/tasks/{task['id']}").json() == task
+
+
+def test_duplicate_unknown_task_creates_nothing(client: TestClient) -> None:
+    """Duplicating a missing task answers 404 and creates no task."""
+    response = client.post("/tasks/999/duplicate")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Task 999 not found"}
+    assert client.get("/tasks").json() == []
+
+
 def test_toggle_task_twice_restores_state(client: TestClient) -> None:
     """Toggling twice returns completed to its initial value."""
     task = _create(client)

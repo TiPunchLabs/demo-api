@@ -32,6 +32,7 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 | PUT | `/tasks/{id}` | 200 replaced task | 404, 422 |
 | PATCH | `/tasks/{id}` | 200 partially updated task | 404, 422 (empty body, unknown field, `null`, invalid value) |
 | POST | `/tasks/{id}/toggle` | 200 task with `completed` inverted | 404 |
+| POST | `/tasks/{id}/duplicate` | 201 copy of the task (same `title` and `priority`, `completed: false`, new `id`) | 404 |
 | DELETE | `/tasks/{id}` | 204 empty body | 404 |
 
 Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false, "priority": "low"|"medium"|"high" = "medium"}`.
@@ -47,6 +48,7 @@ curl localhost:8000/tasks/1
 curl -X PUT localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"title": "Example", "completed": true, "priority": "high"}'
 curl -X PATCH localhost:8000/tasks/1 -H 'content-type: application/json' -d '{"priority": "low"}'
 curl -X POST localhost:8000/tasks/1/toggle
+curl -X POST localhost:8000/tasks/1/duplicate
 curl -X DELETE localhost:8000/tasks/1
 curl localhost:8000/tasks/stats                     # {"total": 3, "completed": 1, "pending": 2}
 curl -X POST localhost:8000/tasks/bulk -H 'content-type: application/json' -d '{"tasks": [{"title": "A"}, {"title": "B"}]}'
