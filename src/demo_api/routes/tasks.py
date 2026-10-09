@@ -104,6 +104,13 @@ def toggle_task(task_id: int, store: Store) -> Task:
     )
 
 
+@router.post("/{task_id}/duplicate", status_code=status.HTTP_201_CREATED)
+def duplicate_task(task_id: int, store: Store) -> Task:
+    """Create a pending copy of a task."""
+    task = store.get(task_id)
+    return store.create(TaskIn(title=task.title, priority=task.priority))
+
+
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id: int, store: Store) -> Response:
     """Delete a task."""

@@ -108,6 +108,21 @@ def test_toggle_task_keeps_priority(client: TestClient) -> None:
     assert response.json() == {**task, "completed": True}
 
 
+def test_duplicate_task(client: TestClient) -> None:
+    """Duplicating a task creates a pending copy with a new id."""
+    task = client.post("/tasks", json={"title": "a", "priority": "high"}).json()
+
+    response = client.post(f"/tasks/{task['id']}/duplicate")
+
+    assert response.status_code == 201
+    assert response.json() == {
+        "id": task["id"] + 1,
+        "title": "a",
+        "completed": False,
+        "priority": "high",
+    }
+
+
 def test_toggle_task_twice_restores_state(client: TestClient) -> None:
     """Toggling twice returns completed to its initial value."""
     task = _create(client)
