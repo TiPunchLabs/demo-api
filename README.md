@@ -64,10 +64,11 @@ Tasks have a `priority` (`"low"`, `"medium"` or `"high"`, default `"medium"`), a
 | Parameter | Type | Default | Constraints |
 |---|---|---|---|
 | `completed` | bool | none (no filter) | `true` / `false` |
+| `priority` | str | none (no filter) | `low` / `medium` / `high` (one value) |
 | `limit` | int | 20 | 1 to 100 inclusive |
 | `offset` | int | 0 | >= 0 |
 
-The `completed` filter is applied before pagination. An `offset` past the last task
+The `completed` and `priority` filters can be combined and are applied before pagination. An `offset` past the last task
 returns `[]` (200); invalid values return 422.
 
 `POST /tasks/bulk` takes `{"tasks": [<task>, ...]}` (1 to 50 tasks) and is atomic: if one
