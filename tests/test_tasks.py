@@ -315,9 +315,71 @@ def test_list_offset_beyond_count_returns_empty(client: TestClient) -> None:
     assert response.json() == []
 
 
+def _seed_priorities(client: TestClient) -> None:
+    """Create 5 tasks: priorities high/low/high/medium/high, tasks 1 and 2 completed."""
+    for index, priority in enumerate(["high", "low", "high", "medium", "high"], start=1):
+        client.post(
+            "/tasks",
+            json={"title": f"task {index}", "priority": priority, "completed": index <= 2},
+        )
+
+
+@pytest.mark.parametrize(
+    ("priority", "expected"),
+    [("high", [1, 3, 5]), ("low", [2]), ("medium", [4])],
+)
+def test_list_filters_priority(client: TestClient, priority: str, expected: list[int]) -> None:
+    """Priority returns only tasks with that priority, sorted by id."""
+    _seed_priorities(client)
+
+    response = client.get("/tasks", params={"priority": priority})
+
+    assert response.status_code == 200
+    assert _ids(response) == expected
+
+
+def test_list_without_priority_returns_all(client: TestClient) -> None:
+    """Without priority, no priority filtering happens."""
+    _seed_priorities(client)
+
+    assert _ids(client.get("/tasks")) == [1, 2, 3, 4, 5]
+
+
+def test_list_priority_combines_with_completed(client: TestClient) -> None:
+    """Priority and completed filters are both applied."""
+    _seed_priorities(client)
+
+    params = {"priority": "high", "completed": "false"}
+    assert _ids(client.get("/tasks", params=params)) == [3, 5]
+
+
+def test_list_priority_applies_before_pagination(client: TestClient) -> None:
+    """The priority filter is applied before limit and offset."""
+    _seed_priorities(client)
+
+    params = {"priority": "high", "limit": 1, "offset": 1}
+    assert _ids(client.get("/tasks", params=params)) == [3]
+
+
+def test_list_priority_without_match_returns_empty(client: TestClient) -> None:
+    """A priority no task has yields 200 and an empty list."""
+    _create(client)
+
+    response = client.get("/tasks", params={"priority": "high"})
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 @pytest.mark.parametrize(
     "params",
-    [{"limit": 0}, {"limit": 101}, {"offset": -1}, {"completed": "abc"}],
+    [
+        {"limit": 0},
+        {"limit": 101},
+        {"offset": -1},
+        {"completed": "abc"},
+        {"priority": "urgent"},
+    ],
 )
 def test_list_rejects_invalid_query(client: TestClient, params: dict) -> None:
     """Out-of-range or malformed query parameters answer 422."""

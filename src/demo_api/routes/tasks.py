@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from demo_api.schemas import DeletedCount, Task, TaskBulkIn, TaskIn, TaskPatch, TaskStats
+from demo_api.schemas import DeletedCount, Priority, Task, TaskBulkIn, TaskIn, TaskPatch, TaskStats
 from demo_api.storage import TaskStore
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -27,13 +27,16 @@ def _not_found(task_id: int) -> HTTPException:
 def list_tasks(
     store: Store,
     completed: bool | None = None,
+    priority: Priority | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[Task]:
-    """List tasks sorted by id, optionally filtered by completion, then paginated."""
+    """List tasks sorted by id, optionally filtered by completion and priority, then paginated."""
     tasks = sorted(store.list(), key=lambda task: task.id)
     if completed is not None:
         tasks = [task for task in tasks if task.completed == completed]
+    if priority is not None:
+        tasks = [task for task in tasks if task.priority == priority]
     return tasks[offset : offset + limit]
 
 
