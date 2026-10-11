@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from demo_api import __version__
-from demo_api.routes import health, info, tasks, version
+from demo_api.routes import health, info, ready, tasks, version
 from demo_api.storage import TaskStore
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.state.task_store = TaskStore()
     app.include_router(health.router)
     app.include_router(info.router)
+    app.include_router(ready.router)
     app.include_router(tasks.router)
     app.include_router(version.router)
     return app
