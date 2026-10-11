@@ -26,6 +26,10 @@ jobs:
       base_branch: ${{ github.event.repository.default_branch }}
       setup_uv: true
       allowed_tools: "Bash(uv sync:*),Bash(uv run pytest:*),Bash(uv run ruff:*),Bash(uv run pre-commit:*)"
-    # Organization secret (Selected repositories). Explicit contract: never `secrets: inherit`.
+      # FlowForge GitHub App: pushes the agent branch and opens the Draft PR, so CI runs
+      # without manual approval (FlowForge #34). Empty: GITHUB_TOKEN delivers.
+      app_client_id: ${{ vars.FLOWFORGE_APP_CLIENT_ID }}
+    # Explicit contract: never `secrets: inherit`.
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      app_private_key: ${{ secrets.FLOWFORGE_APP_PRIVATE_KEY }}
