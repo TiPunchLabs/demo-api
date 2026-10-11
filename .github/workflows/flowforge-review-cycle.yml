@@ -46,6 +46,9 @@ jobs:
       # "Bash(uv run ruff check:*)" would also allow --fix).
       review_allowed_tools: "Bash(uv sync --locked),Bash(uv run pytest:*),Bash(uv run ruff check .),Bash(uv run ruff format --check .)"
       iterate_allowed_tools: "Bash(uv sync --locked),Bash(uv run pytest:*),Bash(uv run ruff check:*),Bash(uv run ruff format:*)"
-    # Organization secret (Selected repositories). Explicit contract: never `secrets: inherit`.
+      # FlowForge GitHub App for the Iterator push (FlowForge #34).
+      app_client_id: ${{ vars.FLOWFORGE_APP_CLIENT_ID }}
+    # Explicit contract: never `secrets: inherit`.
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      app_private_key: ${{ secrets.FLOWFORGE_APP_PRIVATE_KEY }}
