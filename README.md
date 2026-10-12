@@ -27,6 +27,7 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 | GET | `/tasks` | 200 list of tasks (filtered, paginated: see below) | 422 invalid query parameter |
 | POST | `/tasks` | 201 created task | 422 invalid payload |
 | GET | `/tasks/stats` | 200 `{"total", "completed", "pending"}` | — |
+| GET | `/tasks/due?before=YYYY-MM-DD` | 200 list of tasks due before the date (see below) | 422 missing or invalid `before` |
 | POST | `/tasks/bulk` | 201 list of created tasks (1–50, atomic) | 422 |
 | DELETE | `/tasks?completed=true` | 200 `{"deleted": n}` | 422 if `completed` missing or not `true` |
 | GET | `/tasks/{id}` | 200 task | 404 |
@@ -92,6 +93,10 @@ The response carries an `X-Total-Count` header: the number of tasks matching the
 task is invalid, it answers 422 and creates nothing. Created tasks keep the request order
 and get consecutive ids. `DELETE /tasks` only deletes completed tasks and requires
 `completed=true`; without it, or with `completed=false`, it answers 422 and deletes nothing.
+
+`GET /tasks/due?before=YYYY-MM-DD` lists the tasks that have a `due_date` before that date, ordered by
+`due_date` then id. Tasks without a due date are excluded; completed and pending tasks are both listed.
+`before` is required: a missing or invalid date answers 422.
 
 ## Development
 

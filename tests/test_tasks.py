@@ -751,3 +751,53 @@ def test_list_sort_applies_after_filters_and_before_pagination(client: TestClien
     response = client.get("/tasks", params=params)
     assert _ids(response) == [5, 1]
     assert response.headers["X-Total-Count"] == "5"
+
+
+def _create_dated(client: TestClient, title: str, due_date: str | None, **fields: Any) -> int:
+    """Create a task with a due date and return its id."""
+    response = client.post("/tasks", json={"title": title, "due_date": due_date, **fields})
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+def test_due_returns_tasks_due_before_date(client: TestClient) -> None:
+    """Only tasks due before the given date are listed."""
+    first = _create_dated(client, "a", "2026-01-10")
+    second = _create_dated(client, "b", "2026-01-20")
+    _create_dated(client, "c", "2026-03-01")
+
+    response = client.get("/tasks/due", params={"before": "2026-02-01"})
+
+    assert response.status_code == 200
+    assert _ids(response) == [first, second]
+
+
+def test_due_excludes_tasks_without_due_date(client: TestClient) -> None:
+    """Tasks without a due date are never listed."""
+    _create_dated(client, "no date", None)
+    dated = _create_dated(client, "dated", "2026-01-10")
+
+    assert _ids(client.get("/tasks/due", params={"before": "2027-01-01"})) == [dated]
+
+
+def test_due_orders_by_due_date_then_id(client: TestClient) -> None:
+    """Results are sorted by due date, ties by id."""
+    late = _create_dated(client, "late", "2026-01-20")
+    early = _create_dated(client, "early", "2026-01-10")
+    tie = _create_dated(client, "tie", "2026-01-10")
+
+    assert _ids(client.get("/tasks/due", params={"before": "2026-02-01"})) == [early, tie, late]
+
+
+def test_due_includes_completed_and_pending(client: TestClient) -> None:
+    """Completion state does not filter the result."""
+    pending = _create_dated(client, "pending", "2026-01-10")
+    done = _create_dated(client, "done", "2026-01-11", completed=True)
+
+    assert _ids(client.get("/tasks/due", params={"before": "2026-02-01"})) == [pending, done]
+
+
+@pytest.mark.parametrize("params", [{}, {"before": "2026-02-30"}, {"before": "tomorrow"}])
+def test_due_requires_valid_before(client: TestClient, params: dict[str, str]) -> None:
+    """A missing or invalid `before` is rejected."""
+    assert client.get("/tasks/due", params=params).status_code == 422
