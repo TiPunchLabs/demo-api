@@ -85,7 +85,7 @@ def create_tasks_bulk(data: TaskBulkIn, store: Store) -> list[Task]:
 @router.get("/due")
 def list_tasks_due(store: Store, before: date) -> list[Task]:
     """List tasks due before a date, ordered by due date then id."""
-    tasks = [task for task in store.list() if task.due_date is not None and task.due_date <= before]
+    tasks = [task for task in store.list() if task.due_date is not None and task.due_date < before]
     return sorted(tasks, key=lambda task: (task.due_date, task.id))
 
 

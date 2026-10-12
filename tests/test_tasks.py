@@ -772,6 +772,14 @@ def test_due_returns_tasks_due_before_date(client: TestClient) -> None:
     assert _ids(response) == [first, second]
 
 
+def test_due_excludes_task_due_on_the_given_date(client: TestClient) -> None:
+    """A task due exactly on `before` is not listed."""
+    earlier = _create_dated(client, "earlier", "2026-01-31")
+    _create_dated(client, "equal", "2026-02-01")
+
+    assert _ids(client.get("/tasks/due", params={"before": "2026-02-01"})) == [earlier]
+
+
 def test_due_excludes_tasks_without_due_date(client: TestClient) -> None:
     """Tasks without a due date are never listed."""
     _create_dated(client, "no date", None)
