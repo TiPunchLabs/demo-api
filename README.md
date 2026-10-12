@@ -73,11 +73,17 @@ other fields keep it, and `duplicate` copies it.
 |---|---|---|---|
 | `completed` | bool | none (no filter) | `true` / `false` |
 | `priority` | str | none (no filter) | `low` / `medium` / `high` (one value) |
+| `sort` | str | `id` | `id`, `-id`, `title`, `-title`, `priority`, `-priority` |
 | `limit` | int | 20 | 1 to 100 inclusive |
 | `offset` | int | 0 | >= 0 |
 
 The `completed` and `priority` filters can be combined and are applied before pagination. An `offset` past the last task
 returns `[]` (200); invalid values return 422.
+
+`sort` orders the results: `title` ignores case, `priority` ranks `low` < `medium` < `high`, and a `-`
+prefix reverses the order (`-id` is id descending). Tasks equal on the sort key are always ordered by id
+ascending, even in descending sorts. Any other value (including an empty one) returns 422. Sorting is
+applied after the filters and before `limit` / `offset`, and does not change `X-Total-Count`.
 
 The response carries an `X-Total-Count` header: the number of tasks matching the filters, before
 `limit` / `offset` are applied (`0` when there are none). The JSON body stays a plain list.
