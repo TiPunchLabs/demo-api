@@ -32,6 +32,7 @@ def test_create_task(client: TestClient) -> None:
         "title": "Example",
         "completed": False,
         "priority": "medium",
+        "due_date": None,
     }
 
 
@@ -68,6 +69,7 @@ def test_update_task(client: TestClient) -> None:
         "title": "Done",
         "completed": True,
         "priority": "medium",
+        "due_date": None,
     }
     assert client.get(f"/tasks/{task['id']}").json()["completed"] is True
 
@@ -96,6 +98,7 @@ def test_toggle_task(client: TestClient) -> None:
         "title": task["title"],
         "completed": True,
         "priority": "medium",
+        "due_date": None,
     }
 
 
@@ -120,6 +123,7 @@ def test_duplicate_task(client: TestClient) -> None:
         "title": "a",
         "completed": False,
         "priority": "high",
+        "due_date": None,
     }
 
 
@@ -214,7 +218,13 @@ def test_patch_updates_provided_fields(client: TestClient) -> None:
     )
 
     assert response.status_code == 200
-    expected = {"id": task["id"], "title": "New", "completed": True, "priority": "high"}
+    expected = {
+        "id": task["id"],
+        "title": "New",
+        "completed": True,
+        "priority": "high",
+        "due_date": None,
+    }
     assert response.json() == expected
     assert client.get(f"/tasks/{task['id']}").json() == expected
 
@@ -537,3 +547,124 @@ def test_delete_completed_guard(client: TestClient, params: dict) -> None:
 
     assert client.delete("/tasks", params=params).status_code == 422
     assert len(client.get("/tasks").json()) == 1
+
+
+def _create_due(client: TestClient, due_date: str = "2030-05-17") -> dict:
+    """Create a task with a due date through the API and return its JSON body."""
+    response = client.post("/tasks", json={"title": "Due", "due_date": due_date})
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_create_with_due_date(client: TestClient) -> None:
+    """A due date is stored and returned as YYYY-MM-DD."""
+    task = _create_due(client)
+
+    assert task["due_date"] == "2030-05-17"
+    assert client.get(f"/tasks/{task['id']}").json()["due_date"] == "2030-05-17"
+
+
+def test_create_without_due_date_returns_null(client: TestClient) -> None:
+    """A task created without a due date has a null one."""
+    assert _create(client)["due_date"] is None
+
+
+def test_past_due_date_is_accepted(client: TestClient) -> None:
+    """Past dates are valid."""
+    assert _create_due(client, "2000-01-01")["due_date"] == "2000-01-01"
+
+
+@pytest.mark.parametrize("value", ["not-a-date", "2026-02-30"])
+def test_invalid_due_date_is_rejected(client: TestClient, value: str) -> None:
+    """Invalid dates answer 422 on create, PUT and PATCH and change nothing."""
+    task = _create_due(client)
+    url = f"/tasks/{task['id']}"
+
+    assert client.post("/tasks", json={"title": "x", "due_date": value}).status_code == 422
+    assert client.put(url, json={"title": "x", "due_date": value}).status_code == 422
+    assert client.patch(url, json={"due_date": value}).status_code == 422
+    assert client.get(url).json() == task
+
+
+def test_patch_changes_due_date(client: TestClient) -> None:
+    """PATCH sets a new due date."""
+    task = _create_due(client)
+
+    response = client.patch(f"/tasks/{task['id']}", json={"due_date": "2031-01-02"})
+
+    assert response.status_code == 200
+    assert client.get(f"/tasks/{task['id']}").json()["due_date"] == "2031-01-02"
+
+
+def test_patch_null_removes_due_date(client: TestClient) -> None:
+    """PATCH with null removes the due date and keeps other fields."""
+    task = _create_due(client)
+
+    response = client.patch(f"/tasks/{task['id']}", json={"due_date": None})
+
+    assert response.status_code == 200
+    assert client.get(f"/tasks/{task['id']}").json() == {**task, "due_date": None}
+
+
+def test_patch_other_fields_keeps_due_date(client: TestClient) -> None:
+    """PATCH on title, completed or priority leaves the due date unchanged."""
+    task = _create_due(client)
+
+    for payload in ({"title": "New"}, {"completed": True}, {"priority": "high"}):
+        response = client.patch(f"/tasks/{task['id']}", json=payload)
+        assert response.json()["due_date"] == "2030-05-17"
+
+
+def test_patch_due_date_unknown_task(client: TestClient) -> None:
+    """PATCH of a due date on a missing task answers 404."""
+    assert client.patch("/tasks/999", json={"due_date": "2030-01-01"}).status_code == 404
+
+
+def test_toggle_keeps_due_date(client: TestClient) -> None:
+    """Toggling leaves the due date unchanged."""
+    task = _create_due(client)
+
+    response = client.post(f"/tasks/{task['id']}/toggle")
+
+    assert response.json()["due_date"] == "2030-05-17"
+    assert client.get(f"/tasks/{task['id']}").json()["due_date"] == "2030-05-17"
+
+
+def test_put_sets_due_date(client: TestClient) -> None:
+    """PUT with a due date sets it."""
+    task = _create(client)
+
+    response = client.put(f"/tasks/{task['id']}", json={"title": "x", "due_date": "2030-05-17"})
+
+    assert response.json()["due_date"] == "2030-05-17"
+
+
+def test_put_without_due_date_clears_it(client: TestClient) -> None:
+    """PUT is a full replace: omitting the due date clears it."""
+    task = _create_due(client)
+
+    response = client.put(f"/tasks/{task['id']}", json={"title": "x"})
+
+    assert response.json()["due_date"] is None
+    assert client.get(f"/tasks/{task['id']}").json()["due_date"] is None
+
+
+def test_duplicate_copies_due_date(client: TestClient) -> None:
+    """Duplicating copies the due date to the new task."""
+    task = _create_due(client)
+
+    response = client.post(f"/tasks/{task['id']}/duplicate")
+
+    assert response.json()["due_date"] == "2030-05-17"
+    assert client.get(f"/tasks/{task['id']}").json()["due_date"] == "2030-05-17"
+
+
+def test_bulk_create_keeps_due_dates(client: TestClient) -> None:
+    """Each bulk item keeps its own due date."""
+    response = client.post(
+        "/tasks/bulk",
+        json={"tasks": [{"title": "A", "due_date": "2030-01-01"}, {"title": "B"}]},
+    )
+
+    assert [t["due_date"] for t in response.json()] == ["2030-01-01", None]
+    assert [t["due_date"] for t in client.get("/tasks").json()] == ["2030-01-01", None]
