@@ -72,6 +72,9 @@ Tasks have a `priority` (`"low"`, `"medium"` or `"high"`, default `"medium"`), a
 The `completed` and `priority` filters can be combined and are applied before pagination. An `offset` past the last task
 returns `[]` (200); invalid values return 422.
 
+The response carries an `X-Total-Count` header: the number of tasks matching the filters, before
+`limit` / `offset` are applied (`0` when there are none). The JSON body stays a plain list.
+
 `POST /tasks/bulk` takes `{"tasks": [<task>, ...]}` (1 to 50 tasks) and is atomic: if one
 task is invalid, it answers 422 and creates nothing. Created tasks keep the request order
 and get consecutive ids. `DELETE /tasks` only deletes completed tasks and requires
