@@ -30,17 +30,22 @@ def _not_found(task_id: int) -> HTTPException:
 @router.get("")
 def list_tasks(
     store: Store,
+    response: Response,
     completed: bool | None = None,
     priority: Priority | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[Task]:
-    """List tasks sorted by id, optionally filtered by completion and priority, then paginated."""
+    """List tasks sorted by id, optionally filtered by completion and priority, then paginated.
+
+    The `X-Total-Count` header holds the number of tasks matching the filters, before pagination.
+    """
     tasks = sorted(store.list(), key=lambda task: task.id)
     if completed is not None:
         tasks = [task for task in tasks if task.completed == completed]
     if priority is not None:
         tasks = [task for task in tasks if task.priority == priority]
+    response.headers["X-Total-Count"] = str(len(tasks))
     return tasks[offset : offset + limit]
 
 

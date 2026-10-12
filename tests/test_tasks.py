@@ -371,6 +371,62 @@ def test_list_priority_without_match_returns_empty(client: TestClient) -> None:
     assert response.json() == []
 
 
+def test_list_total_count_is_zero_when_empty(client: TestClient) -> None:
+    """With no tasks stored, X-Total-Count is "0"."""
+    response = client.get("/tasks")
+
+    assert response.headers["X-Total-Count"] == "0"
+    assert response.json() == []
+
+
+def test_list_total_count_without_filter(client: TestClient) -> None:
+    """Without filters, X-Total-Count is the number of all tasks, even if fewer are returned."""
+    _seed(client)
+
+    response = client.get("/tasks")
+    assert response.headers["X-Total-Count"] == "5"
+
+    paged = client.get("/tasks", params={"limit": 2, "offset": 1})
+    assert paged.headers["X-Total-Count"] == "5"
+    assert _ids(paged) == [2, 3]
+
+
+def test_list_total_count_with_completed_filter(client: TestClient) -> None:
+    """X-Total-Count counts the tasks matching completed, before pagination."""
+    _seed(client)
+
+    params = {"completed": "false", "limit": 1}
+    response = client.get("/tasks", params=params)
+
+    assert response.headers["X-Total-Count"] == "3"
+    assert _ids(response) == [1]
+
+
+def test_list_total_count_with_priority_filters(client: TestClient) -> None:
+    """X-Total-Count counts the tasks matching priority and completed, before pagination."""
+    _seed_priorities(client)
+
+    high = client.get("/tasks", params={"priority": "high", "limit": 1, "offset": 1})
+    assert high.headers["X-Total-Count"] == "3"
+    assert _ids(high) == [3]
+
+    combined = client.get("/tasks", params={"priority": "high", "completed": "false"})
+    assert combined.headers["X-Total-Count"] == "2"
+
+    none = client.get("/tasks", params={"priority": "low", "completed": "false"})
+    assert none.headers["X-Total-Count"] == "0"
+
+
+def test_list_total_count_with_offset_beyond_total(client: TestClient) -> None:
+    """The header is still sent when the page is empty."""
+    _seed(client)
+
+    response = client.get("/tasks", params={"offset": 50})
+
+    assert response.json() == []
+    assert response.headers["X-Total-Count"] == "5"
+
+
 @pytest.mark.parametrize(
     "params",
     [
