@@ -29,6 +29,8 @@ jobs:
       # FlowForge GitHub App: pushes the agent branch and opens the Draft PR, so CI runs
       # without manual approval (FlowForge #34). Empty: GITHUB_TOKEN delivers.
       app_client_id: ${{ vars.FLOWFORGE_APP_CLIENT_ID }}
+      # GitHub Project sync (FlowForge Prompt 28): organization variable, unset = 0 = off.
+      project_number: ${{ fromJSON(vars.FLOWFORGE_PROJECT_NUMBER || '0') }}
     # Explicit contract: never `secrets: inherit`.
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
