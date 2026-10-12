@@ -668,3 +668,86 @@ def test_bulk_create_keeps_due_dates(client: TestClient) -> None:
 
     assert [t["due_date"] for t in response.json()] == ["2030-01-01", None]
     assert [t["due_date"] for t in client.get("/tasks").json()] == ["2030-01-01", None]
+
+
+def _seed_sort(client: TestClient) -> None:
+    """Create 5 tasks: apple/medium, Banana/high, cherry/low, Apple/high, banana/low."""
+    for title, priority in [
+        ("apple", "medium"),
+        ("Banana", "high"),
+        ("cherry", "low"),
+        ("Apple", "high"),
+        ("banana", "low"),
+    ]:
+        response = client.post("/tasks", json={"title": title, "priority": priority})
+        assert response.status_code == 201
+
+
+def test_list_sort_default_is_id_ascending(client: TestClient) -> None:
+    """Without sort, and with sort=id, tasks are ordered by id ascending."""
+    _seed_sort(client)
+
+    assert _ids(client.get("/tasks")) == [1, 2, 3, 4, 5]
+    assert _ids(client.get("/tasks", params={"sort": "id"})) == [1, 2, 3, 4, 5]
+
+
+def test_list_sort_id_descending(client: TestClient) -> None:
+    """sort=-id orders by id descending."""
+    _seed_sort(client)
+
+    assert _ids(client.get("/tasks", params={"sort": "-id"})) == [5, 4, 3, 2, 1]
+
+
+def test_list_sort_title_ignores_case(client: TestClient) -> None:
+    """sort=title orders apple, Banana, cherry case-insensitively; -title reverses it."""
+    for title in ["cherry", "Banana", "apple"]:
+        _create(client, title)
+
+    ascending = client.get("/tasks", params={"sort": "title"})
+    descending = client.get("/tasks", params={"sort": "-title"})
+
+    assert [t["title"] for t in ascending.json()] == ["apple", "Banana", "cherry"]
+    assert [t["title"] for t in descending.json()] == ["cherry", "Banana", "apple"]
+
+
+def test_list_sort_title_ties_by_id_ascending(client: TestClient) -> None:
+    """Titles equal ignoring case are ordered by id ascending, in both directions."""
+    _seed_sort(client)
+
+    assert _ids(client.get("/tasks", params={"sort": "title"})) == [1, 4, 2, 5, 3]
+    assert _ids(client.get("/tasks", params={"sort": "-title"})) == [3, 2, 5, 1, 4]
+
+
+def test_list_sort_priority_ascending_and_descending(client: TestClient) -> None:
+    """sort=priority goes low, medium, high; -priority starts with high; ties by id ascending."""
+    _seed_sort(client)
+
+    assert _ids(client.get("/tasks", params={"sort": "priority"})) == [3, 5, 1, 2, 4]
+    assert _ids(client.get("/tasks", params={"sort": "-priority"})) == [2, 4, 1, 3, 5]
+
+
+@pytest.mark.parametrize("value", ["foo", "completed", "", "Title", "+id"])
+def test_list_sort_invalid_returns_422(client: TestClient, value: str) -> None:
+    """Any value outside the allowed sort keys is rejected."""
+    _seed_sort(client)
+
+    assert client.get("/tasks", params={"sort": value}).status_code == 422
+
+
+def test_list_sort_applies_after_filters_and_before_pagination(client: TestClient) -> None:
+    """Sort runs on the filtered list, then limit/offset slice it; the total count is unchanged."""
+    _seed_sort(client)
+
+    params = {"priority": "high", "sort": "-title", "limit": 1, "offset": 1}
+    response = client.get("/tasks", params=params)
+    assert _ids(response) == [4]
+    assert response.headers["X-Total-Count"] == "2"
+
+    response = client.get("/tasks", params={"sort": "-id", "limit": 2})
+    assert _ids(response) == [5, 4]
+    assert response.headers["X-Total-Count"] == "5"
+
+    params = {"completed": "false", "sort": "priority", "limit": 2, "offset": 1}
+    response = client.get("/tasks", params=params)
+    assert _ids(response) == [5, 1]
+    assert response.headers["X-Total-Count"] == "5"

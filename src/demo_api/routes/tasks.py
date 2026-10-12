@@ -1,7 +1,7 @@
 """CRUD endpoints for tasks."""
 
 import logging
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
@@ -20,6 +20,10 @@ def get_store(request: Request) -> TaskStore:
 
 Store = Annotated[TaskStore, Depends(get_store)]
 
+SortKey = Literal["id", "-id", "title", "-title", "priority", "-priority"]
+
+_PRIORITY_RANK = {"low": 0, "medium": 1, "high": 2}
+
 
 def _not_found(task_id: int) -> HTTPException:
     """Log a warning and build the 404 error for a missing task."""
@@ -33,10 +37,14 @@ def list_tasks(
     response: Response,
     completed: bool | None = None,
     priority: Priority | None = None,
+    sort: SortKey = "id",
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[Task]:
-    """List tasks sorted by id, optionally filtered by completion and priority, then paginated.
+    """List tasks, filtered by completion and priority, sorted, then paginated.
+
+    `sort` is `id` (default), `title` or `priority`, optionally prefixed by `-` for descending
+    order. Ties are always ordered by id ascending.
 
     The `X-Total-Count` header holds the number of tasks matching the filters, before pagination.
     """
@@ -45,6 +53,13 @@ def list_tasks(
         tasks = [task for task in tasks if task.completed == completed]
     if priority is not None:
         tasks = [task for task in tasks if task.priority == priority]
+    descending = sort.startswith("-")
+    if sort.endswith("title"):
+        tasks.sort(key=lambda task: task.title.casefold(), reverse=descending)
+    elif sort.endswith("priority"):
+        tasks.sort(key=lambda task: _PRIORITY_RANK[task.priority], reverse=descending)
+    elif descending:
+        tasks.reverse()
     response.headers["X-Total-Count"] = str(len(tasks))
     return tasks[offset : offset + limit]
 
