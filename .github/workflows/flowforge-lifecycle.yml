@@ -6,7 +6,8 @@
 # once FlowForge publishes releases.
 #
 # The merge itself stays a human action: this workflow only runs after it. Forks and
-# non-`agent/*` branches are ignored. No secret: no agent runs.
+# non-`agent/*` branches are ignored. No agent runs: the FlowForge App key is used only
+# for the optional GitHub Project sync.
 name: FlowForge lifecycle
 
 on:
@@ -29,3 +30,9 @@ jobs:
       pull-requests: read
     with:
       pull_request_number: ${{ github.event.pull_request.number }}
+      # GitHub Project sync (FlowForge Prompt 28): organization variable, unset = 0 = off.
+      project_number: ${{ fromJSON(vars.FLOWFORGE_PROJECT_NUMBER || '0') }}
+      app_client_id: ${{ vars.FLOWFORGE_APP_CLIENT_ID }}
+    # Explicit contract: never `secrets: inherit`.
+    secrets:
+      app_private_key: ${{ secrets.FLOWFORGE_APP_PRIVATE_KEY }}

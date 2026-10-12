@@ -48,6 +48,8 @@ jobs:
       iterate_allowed_tools: "Bash(uv sync --locked),Bash(uv run pytest:*),Bash(uv run ruff check:*),Bash(uv run ruff format:*)"
       # FlowForge GitHub App for the Iterator push (FlowForge #34).
       app_client_id: ${{ vars.FLOWFORGE_APP_CLIENT_ID }}
+      # GitHub Project sync (FlowForge Prompt 28): organization variable, unset = 0 = off.
+      project_number: ${{ fromJSON(vars.FLOWFORGE_PROJECT_NUMBER || '0') }}
     # Explicit contract: never `secrets: inherit`.
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
