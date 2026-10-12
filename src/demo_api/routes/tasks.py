@@ -98,7 +98,7 @@ def get_task(task_id: int, store: Store) -> Task:
 
 @router.put("/{task_id}")
 def replace_task(task_id: int, data: TaskIn, store: Store) -> Task:
-    """Replace a task's title, completion state and priority."""
+    """Replace a task's fields; an omitted `due_date` clears it."""
     task = store.replace(task_id, data)
     if task is None:
         raise _not_found(task_id)
@@ -123,7 +123,13 @@ def toggle_task(task_id: int, store: Store) -> Task:
     if task is None:
         raise _not_found(task_id)
     toggled = store.replace(
-        task_id, TaskIn(title=task.title, completed=not task.completed, priority=task.priority)
+        task_id,
+        TaskIn(
+            title=task.title,
+            completed=not task.completed,
+            priority=task.priority,
+            due_date=task.due_date,
+        ),
     )
     logger.info("task toggled id=%d", task_id)
     return toggled
@@ -135,7 +141,7 @@ def duplicate_task(task_id: int, store: Store) -> Task:
     task = store.get(task_id)
     if task is None:
         raise _not_found(task_id)
-    copy = store.create(TaskIn(title=task.title, priority=task.priority))
+    copy = store.create(TaskIn(title=task.title, priority=task.priority, due_date=task.due_date))
     logger.info("task duplicated id=%d from id=%d", copy.id, task_id)
     return copy
 

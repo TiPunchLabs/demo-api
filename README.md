@@ -36,7 +36,7 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 | POST | `/tasks/{id}/duplicate` | 201 copy of the task (same `title` and `priority`, `completed: false`, new `id`) | 404 |
 | DELETE | `/tasks/{id}` | 204 empty body | 404 |
 
-Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false, "priority": "low"|"medium"|"high" = "medium"}`.
+Task: `{"id": int, "title": str (1–200 chars), "completed": bool = false, "priority": "low"|"medium"|"high" = "medium", "due_date": "YYYY-MM-DD"|null = null}`.
 
 Examples:
 
@@ -58,7 +58,14 @@ curl -X DELETE 'localhost:8000/tasks?completed=true'  # {"deleted": <n>}
 
 Tasks have a `priority` (`"low"`, `"medium"` or `"high"`, default `"medium"`), accepted by
 `POST` and `PUT`. `PATCH /tasks/{id}` updates only the fields present in the body
-(`title`, `completed`, `priority`); an empty body, an unknown field or a `null` value answers 422.
+(`title`, `completed`, `priority`, `due_date`); an empty body, an unknown field or a `null` value
+(except for `due_date`) answers 422.
+
+Tasks also have an optional `due_date`, a calendar date in ISO 8601 `YYYY-MM-DD` format (`null` when
+absent; past dates are accepted, an invalid date answers 422). Set it on `POST /tasks`, bulk create
+or `PUT`; change it with `PATCH /tasks/{id}` and `{"due_date": "2030-05-17"}`; remove it with
+`{"due_date": null}`. `PUT` is a full replace, so omitting `due_date` clears it. `toggle` and `PATCH` of
+other fields keep it, and `duplicate` copies it.
 
 `GET /tasks` returns tasks sorted by id and accepts optional query parameters:
 
