@@ -23,7 +23,7 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 |---|---|---|---|
 | GET | `/health` | 200 `{"status": "ok"}` | — |
 | GET | `/ready` | 200 `{"status": "ready"}` | — |
-| GET | `/version` | 200 `{"version": str}` | — |
+| GET | `/version` | 200 `{"name": "demo-api", "version": str}` | — |
 | GET | `/tasks` | 200 list of tasks (filtered, paginated: see below) | 422 invalid query parameter |
 | POST | `/tasks` | 201 created task | 422 invalid payload |
 | GET | `/tasks/stats` | 200 `{"total", "completed", "pending"}` | — |

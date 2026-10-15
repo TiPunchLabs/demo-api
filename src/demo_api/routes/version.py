@@ -9,5 +9,5 @@ router = APIRouter(tags=["version"])
 
 @router.get("/version")
 def version() -> dict[str, str]:
-    """Report the service version."""
-    return {"version": __version__}
+    """Report the service name and version."""
+    return {"name": "demo-api", "version": __version__}
