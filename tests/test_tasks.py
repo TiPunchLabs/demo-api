@@ -1,5 +1,6 @@
 """Tests for the /tasks CRUD."""
 
+from datetime import date, timedelta
 from typing import Any
 
 import pytest
@@ -471,6 +472,63 @@ def test_stats_non_empty(client: TestClient) -> None:
     client.put("/tasks/1", json={"title": "a", "completed": True})
 
     assert client.get("/tasks/stats").json() == {"total": 3, "completed": 1, "pending": 2}
+
+
+def _create_overdue_case(
+    client: TestClient, title: str, due: date | None, completed: bool = False
+) -> int:
+    """Create a task with a due date and completion state; return its id."""
+    payload: dict[str, Any] = {"title": title, "completed": completed}
+    if due is not None:
+        payload["due_date"] = due.isoformat()
+    response = client.post("/tasks", json=payload)
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+def test_overdue_empty(client: TestClient) -> None:
+    """With no task, the overdue list is empty."""
+    response = client.get("/tasks/overdue")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_overdue_mix(client: TestClient) -> None:
+    """Only pending tasks due strictly before today are returned."""
+    today = date.today()
+    overdue = _create_overdue_case(client, "overdue", today - timedelta(days=1))
+    _create_overdue_case(client, "today", today)
+    _create_overdue_case(client, "future", today + timedelta(days=1))
+    _create_overdue_case(client, "done", today - timedelta(days=5), completed=True)
+    _create_overdue_case(client, "no date", None)
+
+    response = client.get("/tasks/overdue")
+
+    assert response.status_code == 200
+    assert [task["id"] for task in response.json()] == [overdue]
+
+
+def test_overdue_none_overdue(client: TestClient) -> None:
+    """Without any overdue task, the answer is 200 with an empty list."""
+    _create_overdue_case(client, "future", date.today() + timedelta(days=1))
+
+    response = client.get("/tasks/overdue")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_overdue_sorted_by_due_date_then_id(client: TestClient) -> None:
+    """Tasks are sorted by due date ascending, ties by id ascending."""
+    today = date.today()
+    recent = _create_overdue_case(client, "recent", today - timedelta(days=1))
+    old_a = _create_overdue_case(client, "old a", today - timedelta(days=10))
+    old_b = _create_overdue_case(client, "old b", today - timedelta(days=10))
+
+    response = client.get("/tasks/overdue")
+
+    assert [task["id"] for task in response.json()] == [old_a, old_b, recent]
 
 
 def test_bulk_create_success(client: TestClient) -> None:

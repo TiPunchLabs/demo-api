@@ -27,6 +27,7 @@ With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 | GET | `/tasks` | 200 list of tasks (filtered, paginated: see below) | 422 invalid query parameter |
 | POST | `/tasks` | 201 created task | 422 invalid payload |
 | GET | `/tasks/stats` | 200 `{"total", "completed", "pending"}` | — |
+| GET | `/tasks/overdue` | 200 list of pending tasks with `due_date` before today (server local date), sorted by `due_date` then `id` | — |
 | POST | `/tasks/bulk` | 201 list of created tasks (1–50, atomic) | 422 |
 | DELETE | `/tasks?completed=true` | 200 `{"deleted": n}` | 422 if `completed` missing or not `true` |
 | GET | `/tasks/{id}` | 200 task | 404 |
