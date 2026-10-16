@@ -1,6 +1,7 @@
 """CRUD endpoints for tasks."""
 
 import logging
+from datetime import date
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -85,6 +86,18 @@ def create_tasks_bulk(data: TaskBulkIn, store: Store) -> list[Task]:
 def task_stats(store: Store) -> TaskStats:
     """Return task counters."""
     return store.stats()
+
+
+@router.get("/overdue")
+def list_overdue_tasks(store: Store) -> list[Task]:
+    """List pending tasks due before today (server local date), by due date then id."""
+    today = date.today()
+    tasks = [
+        task
+        for task in store.list()
+        if not task.completed and task.due_date is not None and task.due_date < today
+    ]
+    return sorted(tasks, key=lambda task: (task.due_date, task.id))
 
 
 @router.delete("")
