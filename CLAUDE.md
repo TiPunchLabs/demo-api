@@ -54,6 +54,15 @@ tests/
 The API reference (endpoints, payloads, status codes) lives in the `## API` section of
 `README.md`. This file only holds instructions for agents: never document endpoints here.
 
+## Specification
+
+- **Read `SPEC.md` before any change to the application's behaviour.** It holds the features
+  (F-xxx), rules (R-xxx) and validation scenarios (S-xxx) a change must preserve.
+- Every functional change must stay consistent with `SPEC.md`. If an Issue contradicts a rule,
+  do not silently break it: say so in the PR description and cite the rule id.
+- Behaviours listed under "Not guaranteed" in `SPEC.md` are not part of the contract.
+- A change that adds or modifies a behaviour updates `SPEC.md` in the same PR.
+
 ## Commands
 
 ```bash
