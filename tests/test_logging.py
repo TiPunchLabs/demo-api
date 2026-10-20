@@ -40,6 +40,13 @@ def test_logs_task_changes(client: TestClient, caplog: pytest.LogCaptureFixture)
     ]
 
 
+def test_priority_stats_logs_nothing(client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
+    """Reading the priority counts logs no task record."""
+    caplog.set_level(logging.INFO)
+    client.get("/tasks/stats/by-priority")
+    assert _task_records(caplog) == []
+
+
 def test_logs_not_found_as_warning(client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
     """A 404 on a missing task logs a WARNING with the id."""
     caplog.set_level(logging.INFO)
