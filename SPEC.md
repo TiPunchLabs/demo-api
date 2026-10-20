@@ -1,14 +1,17 @@
 # demo-api — Specification
 
 > **Status**: functional reference of the project, effective once merged by the owner.
-> Only confirmed requirements and owner decisions appear here. Evidence, open observations and
-> contradictions are tracked in [`docs/flowforge-spec-review.md`](docs/flowforge-spec-review.md);
-> anything listed there but not here is not a requirement.
+> Each feature and rule states its status (FlowForge `docs/spec-contract.md` §2.3):
+> `CONFIRMED` (documented or decided by the owner: a requirement), `OBSERVED` (current behaviour,
+> not a requirement), `KNOWN GAP` (contract and implementation or tests disagree; the contract
+> wins). Evidence, open observations and contradictions are tracked in
+> [`docs/flowforge-spec-review.md`](docs/flowforge-spec-review.md); anything listed there but not
+> here is not a requirement.
 >
 > Exact payloads and status codes per endpoint live in the `## API` section of `README.md`.
 > This file states the behaviours and invariants a change must preserve.
 
-## 1. Purpose and scope
+## 1. Objective and scope
 
 **Purpose.** `demo-api` is a minimal HTTP service for managing a list of tasks. It is the first
 target repository of FlowForge: AI agents receive GitHub Issues and open Draft PRs here, so the
@@ -34,14 +37,14 @@ who evolve it.
 
 Any request that crosses these limits is a scope change and must be explicitly asked for in an Issue.
 
-**Not guaranteed.** The current implementation shows these behaviours, but clients and agents must
-not rely on them, and a change to them does not contradict this specification:
+**Not guaranteed.** The current implementation shows these `OBSERVED` behaviours, but clients and
+agents must not rely on them, and a change to them does not contradict this specification:
 
 - Unknown fields in a `POST` / `PUT` body are currently ignored (`PATCH` rejects them: R-007).
 - Ids of deleted tasks are currently not reused (R-002).
 - Error response bodies (`detail` messages and shapes of 404, 422, 500): only status codes are
   contractual (R-015).
-- Whitespace-only titles are currently accepted; rejecting them is planned in #55.
+- Whitespace-only titles are currently accepted; the owner decided to reject them (#55). `KNOWN GAP`
 
 ------
 
@@ -54,12 +57,16 @@ ready to serve. Both always answer 200 with a fixed body and check no dependency
 
 **Rules:** —
 
+**Status:** `CONFIRMED`
+
 ### F-002 — Service identification
 
 **Description:** `GET /version` and `GET /info` return the service name (`demo-api`) and its
 current version. Both endpoints are kept and are equivalent: they always return the same body.
 
 **Rules:** R-014
+
+**Status:** `CONFIRMED`
 
 ### F-003 — Task creation
 
@@ -68,11 +75,15 @@ request (`POST /tasks/bulk`). The server assigns ids and returns the created tas
 
 **Rules:** R-001, R-002, R-004, R-005, R-006
 
+**Status:** `CONFIRMED`
+
 ### F-004 — Task reading
 
 **Description:** A client reads one task by id (`GET /tasks/{id}`).
 
 **Rules:** R-003
+
+**Status:** `CONFIRMED`
 
 ### F-005 — Task listing
 
@@ -81,6 +92,8 @@ sorted (`sort`), paginated (`limit`, `offset`), with the matching total in `X-To
 
 **Rules:** R-004, R-009
 
+**Status:** `CONFIRMED`
+
 ### F-006 — Task modification
 
 **Description:** A client replaces a task (`PUT`), partially updates it (`PATCH`) or inverts its
@@ -88,11 +101,15 @@ completion state (`POST /tasks/{id}/toggle`).
 
 **Rules:** R-001, R-003, R-004, R-007, R-008
 
+**Status:** `CONFIRMED`
+
 ### F-007 — Task duplication
 
 **Description:** `POST /tasks/{id}/duplicate` creates a new pending copy of an existing task.
 
 **Rules:** R-002, R-003, R-008
+
+**Status:** `CONFIRMED`
 
 ### F-008 — Task deletion
 
@@ -101,18 +118,24 @@ once (`DELETE /tasks?completed=true`, returns the number deleted).
 
 **Rules:** R-003, R-010
 
+**Status:** `CONFIRMED`
+
 ### F-009 — Task counters
 
 **Description:** `GET /tasks/stats` returns `total`, `completed` and `pending` counts over all
-tasks, with `pending = total - completed`.
+tasks. `pending = total - completed` is `OBSERVED`.
 
 **Rules:** —
+
+**Status:** `CONFIRMED`
 
 ### F-010 — Overdue tasks
 
 **Description:** `GET /tasks/overdue` lists the tasks that are late.
 
 **Rules:** R-011
+
+**Status:** `CONFIRMED`
 
 ### F-011 — Application logging
 
@@ -121,17 +144,21 @@ unhandled errors, in plain text, without ever exposing task content.
 
 **Rules:** R-012, R-013
 
+**Status:** `CONFIRMED`
+
 ------
 
 ## 3. Rules and constraints
 
 ### R-001 — Task model
 
+**Status:** `CONFIRMED`
+
 **Requirement:** A task has exactly these fields:
 
 | Field | Type | Constraint | Default |
 |---|---|---|---|
-| `id` | int | assigned by the server, never by the client | — |
+| `id` | int | assigned by the server (R-002) | — |
 | `title` | string | 1 to 200 characters, required | — |
 | `completed` | bool | — | `false` |
 | `priority` | string | one of `low`, `medium`, `high` | `medium` |
@@ -141,23 +168,35 @@ Any value outside these constraints answers 422.
 
 ### R-002 — Id assignment
 
-**Requirement:** Ids are assigned by the server and unique among existing tasks. In a fresh store
-the first task gets id 1 and each creation gets a higher id than the previous one; a rejected
-creation consumes no id. Tasks created by one bulk request get consecutive ids in request order.
-A replace, patch or toggle never changes a task's id. Whether the id of a deleted task can be
-reused is not guaranteed.
+**Status:** `CONFIRMED`
+
+**Requirement:** Ids are assigned by the server and unique among existing tasks. Tasks created by
+one bulk request get consecutive ids in request order. A replace, patch or toggle never changes a
+task's id. Whether the id of a deleted task can be reused is not guaranteed (owner decision 5).
+
+`OBSERVED`, not guaranteed: in a fresh store the first task gets id 1, and a rejected creation
+consumes no id. Scenarios that show exact id values (S-003, S-005, S-006) illustrate this current
+behaviour.
 
 ### R-003 — Unknown task
 
+**Status:** `CONFIRMED`
+
 **Requirement:** Any operation on a task id that does not exist (read, replace, patch, toggle,
-duplicate, delete) answers 404 and changes nothing.
+duplicate, delete) answers 404.
+
+`OBSERVED`: the request changes nothing (tested for duplicate only).
 
 ### R-004 — Rejected input changes nothing
+
+**Status:** `CONFIRMED`
 
 **Requirement:** A request rejected with 422 (invalid body, invalid query parameter) leaves the
 stored tasks unchanged.
 
 ### R-005 — In-memory storage
+
+**Status:** `CONFIRMED`
 
 **Requirement:** Tasks are kept in memory only: a fresh application starts with no task, and data is
 neither persisted nor shared across processes. Persistence requires an explicit Issue.
@@ -169,10 +208,14 @@ concurrently.
 
 ### R-006 — Atomic bulk creation
 
+**Status:** `CONFIRMED`
+
 **Requirement:** `POST /tasks/bulk` accepts 1 to 50 tasks. If any task is invalid, or the count is
 outside 1–50, the request answers 422 and creates no task.
 
 ### R-007 — Replace vs partial update
+
+**Status:** `CONFIRMED`
 
 **Requirement:**
 
@@ -183,13 +226,17 @@ outside 1–50, the request answers 422 and creates no task.
 
 ### R-008 — Field preservation on derived operations
 
+**Status:** `CONFIRMED`
+
 **Requirement:**
 
 - `toggle` inverts `completed` and keeps every other field.
 - `duplicate` creates a new task with a new id, the same `title`, `priority` and `due_date`,
-  `completed: false`, answers 201, and leaves the source task unchanged.
+  `completed: false`, and answers 201. It leaves the source task unchanged (`OBSERVED`).
 
 ### R-009 — Listing pipeline
+
+**Status:** `CONFIRMED`
 
 **Requirement:** `GET /tasks` processes in this order: filters → sort → pagination.
 
@@ -204,16 +251,22 @@ outside 1–50, the request answers 422 and creates no task.
 
 ### R-010 — Guarded bulk deletion
 
+**Status:** `CONFIRMED`
+
 **Requirement:** `DELETE /tasks` deletes only completed tasks and only when `completed=true` is
 given. Without it, or with `completed=false`, it answers 422 and deletes nothing.
 
 ### R-011 — Overdue definition
+
+**Status:** `CONFIRMED`
 
 **Requirement:** A task is overdue when it is not completed, has a `due_date`, and that date is
 strictly before today's date on the server (local date). A task due today is not overdue.
 `GET /tasks/overdue` returns overdue tasks sorted by `due_date` ascending, then id ascending.
 
 ### R-012 — Logged events
+
+**Status:** `CONFIRMED`
 
 **Requirement:**
 
@@ -227,14 +280,23 @@ strictly before today's date on the server (local date). A task due today is not
 
 ### R-013 — No task content in logs
 
+**Status:** `CONFIRMED`
+
 **Requirement:** Task titles never appear in log messages. Logs identify tasks by id only.
 
 ### R-014 — Version source
 
+**Status:** `CONFIRMED`
+
 **Requirement:** The version reported by the API equals the installed package version (from
 `pyproject.toml` metadata) and is never hardcoded in the application code.
 
+`KNOWN GAP`: `test_info.py` and `test_version_returns_current_version` still assert the literal
+`"0.1.0"` (fix tracked in #54).
+
 ### R-015 — Error contract
+
+**Status:** `CONFIRMED`
 
 **Requirement:** The error contract is limited to HTTP status codes and the rules that trigger
 them: 404 for an unknown task (R-003), 422 for invalid input with no state change (R-004, R-006,
