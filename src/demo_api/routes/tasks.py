@@ -6,7 +6,16 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from demo_api.schemas import DeletedCount, Priority, Task, TaskBulkIn, TaskIn, TaskPatch, TaskStats
+from demo_api.schemas import (
+    DeletedCount,
+    Priority,
+    PriorityStats,
+    Task,
+    TaskBulkIn,
+    TaskIn,
+    TaskPatch,
+    TaskStats,
+)
 from demo_api.storage import TaskStore
 
 logger = logging.getLogger(__name__)
@@ -86,6 +95,15 @@ def create_tasks_bulk(data: TaskBulkIn, store: Store) -> list[Task]:
 def task_stats(store: Store) -> TaskStats:
     """Return task counters."""
     return store.stats()
+
+
+@router.get("/stats/by-priority")
+def task_stats_by_priority(store: Store) -> PriorityStats:
+    """Return the number of tasks for each priority, completed or not."""
+    counts = {"low": 0, "medium": 0, "high": 0}
+    for task in store.list():
+        counts[task.priority] += 1
+    return PriorityStats(**counts)
 
 
 @router.get("/overdue")

@@ -146,6 +146,16 @@ unhandled errors, in plain text, without ever exposing task content.
 
 **Status:** `CONFIRMED`
 
+### F-012 — Priority counters
+
+**Description:** `GET /tasks/stats/by-priority` returns the number of tasks for each priority over
+all tasks, completed or not, as `{"low": n, "medium": n, "high": n}`; the three keys are always
+present, 0 for a priority with no task.
+
+**Rules:** R-001
+
+**Status:** `CONFIRMED` (owner decision, #58)
+
 ------
 
 ## 3. Rules and constraints
@@ -469,3 +479,11 @@ THEN no log message contains that title
 GIVEN a request whose handler raises an unexpected exception
 WHEN the request is processed
 THEN the answer is 500 and an `ERROR` record with the traceback is logged
+
+### S-020 — Counts per priority
+
+**Covers:** F-012, R-001
+
+GIVEN tasks with priorities `high` (pending), `high` (completed) and `low`, and none `medium`
+WHEN a client calls `GET /tasks/stats/by-priority`
+THEN the answer is 200 `{"low": 1, "medium": 0, "high": 2}`

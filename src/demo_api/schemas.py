@@ -59,6 +59,14 @@ class TaskStats(BaseModel):
     pending: int
 
 
+class PriorityStats(BaseModel):
+    """Task counters per priority."""
+
+    low: int
+    medium: int
+    high: int
+
+
 class DeletedCount(BaseModel):
     """Result of a bulk deletion."""
 

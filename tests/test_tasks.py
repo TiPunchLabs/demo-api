@@ -474,6 +474,49 @@ def test_stats_non_empty(client: TestClient) -> None:
     assert client.get("/tasks/stats").json() == {"total": 3, "completed": 1, "pending": 2}
 
 
+def test_stats_by_priority_empty(client: TestClient) -> None:
+    """Priority counts of an empty store are all zero."""
+    response = client.get("/tasks/stats/by-priority")
+
+    assert response.status_code == 200
+    assert response.json() == {"low": 0, "medium": 0, "high": 0}
+
+
+def test_stats_by_priority_counts_all_tasks(client: TestClient) -> None:
+    """Completed and pending tasks are both counted per priority (S-020)."""
+    client.post("/tasks", json={"title": "a", "priority": "high"})
+    done = client.post("/tasks", json={"title": "b", "priority": "high"}).json()["id"]
+    client.post("/tasks", json={"title": "c", "priority": "low"})
+    client.post(f"/tasks/{done}/toggle")
+
+    response = client.get("/tasks/stats/by-priority")
+
+    assert response.status_code == 200
+    assert response.json() == {"low": 1, "medium": 0, "high": 2}
+
+
+def test_stats_by_priority_sum_matches_total(client: TestClient) -> None:
+    """The three counts are integers and sum to the total of /tasks/stats."""
+    _bulk(client, ["a", "b", "c"])
+    client.patch("/tasks/1", json={"priority": "low", "completed": True})
+
+    counts = client.get("/tasks/stats/by-priority").json()
+
+    assert set(counts) == {"low", "medium", "high"}
+    assert all(isinstance(value, int) for value in counts.values())
+    assert sum(counts.values()) == client.get("/tasks/stats").json()["total"]
+
+
+def test_stats_by_priority_is_read_only(client: TestClient) -> None:
+    """Reading the priority counts changes no stored task."""
+    client.post("/tasks", json={"title": "a", "priority": "low"})
+    before = client.get("/tasks").json()
+
+    client.get("/tasks/stats/by-priority")
+
+    assert client.get("/tasks").json() == before
+
+
 def _create_overdue_case(
     client: TestClient, title: str, due: date | None, completed: bool = False
 ) -> int:
