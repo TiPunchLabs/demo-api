@@ -1,8 +1,8 @@
 # Hands issues labeled `agent:ready` to the FlowForge Developer agent.
 #
 # No agent logic lives here: everything is in the FlowForge reusable workflow.
-# `@main` is a POC reference (FlowForge has no tag yet); pin to a tag or commit SHA
-# once FlowForge publishes releases.
+# Pinned to FlowForge v0.1.0 by full commit SHA (immutable). All five callers use the same
+# SHA; update them together (FlowForge docs/target-onboarding.md, "Versions and updates").
 name: FlowForge agent
 
 on:
@@ -15,7 +15,7 @@ permissions: {}
 jobs:
   develop:
     if: github.event.label.name == 'agent:ready'
-    uses: TiPunchLabs/flowforge/.github/workflows/agent-develop.yml@main
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-develop.yml@afa60c599fa47643bba45e26dad0e836b0375b69 # v0.1.0
     # Must cover what the called workflow requests; it can only narrow, never widen.
     permissions:
       contents: write
