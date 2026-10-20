@@ -17,6 +17,13 @@ uv run demo-api            # http://127.0.0.1:8000, interactive docs at /docs
 
 With direnv: `direnv allow` once, then the venv is synced and activated on `cd`.
 
+## Specification
+
+[SPEC.md](SPEC.md) is the functional reference of the project: features, business rules,
+guarantees and validation scenarios. The `## API` section below details payloads and status codes;
+[docs/flowforge-spec-review.md](docs/flowforge-spec-review.md) records the evidence and decisions
+behind the specification.
+
 ## API
 
 | Method | Path | Success | Errors |
