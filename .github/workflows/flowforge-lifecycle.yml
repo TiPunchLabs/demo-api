@@ -2,8 +2,8 @@
 # merged -> agent:done, closed without merge -> no FlowForge state label.
 #
 # No agent logic lives here: everything is in the FlowForge reusable workflow.
-# `@main` is a POC reference (FlowForge has no tag yet); pin to a tag or commit SHA
-# once FlowForge publishes releases.
+# Pinned to FlowForge v0.1.0 by full commit SHA (immutable). All five callers use the same
+# SHA; update them together (FlowForge docs/target-onboarding.md, "Versions and updates").
 #
 # The merge itself stays a human action: this workflow only runs after it. Forks and
 # non-`agent/*` branches are ignored. No agent runs: the FlowForge App key is used only
@@ -22,7 +22,7 @@ jobs:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository
       && startsWith(github.event.pull_request.head.ref, 'agent/')
-    uses: TiPunchLabs/flowforge/.github/workflows/agent-lifecycle.yml@main
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-lifecycle.yml@afa60c599fa47643bba45e26dad0e836b0375b69 # v0.1.0
     # Must cover what the called workflow requests; it can only narrow, never widen.
     #   issues: write   linked Issue -> agent:done (or no FlowForge state)
     permissions:

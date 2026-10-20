@@ -2,8 +2,8 @@
 # loop (at most 3 Iterator passes, then a final Reviewer).
 #
 # No agent logic lives here: everything is in the FlowForge reusable workflow.
-# `@main` is a POC reference (FlowForge has no tag yet); pin to a tag or commit SHA
-# once FlowForge publishes releases.
+# Pinned to FlowForge v0.1.0 by full commit SHA (immutable). All five callers use the same
+# SHA; update them together (FlowForge docs/target-onboarding.md, "Versions and updates").
 #
 # Trigger: workflow_dispatch only, started by a human for one Draft PR:
 #   gh workflow run flowforge-review-cycle.yml -f pull_request_number=<n>
@@ -26,7 +26,7 @@ permissions: {}
 
 jobs:
   review-cycle:
-    uses: TiPunchLabs/flowforge/.github/workflows/review-cycle.yml@main
+    uses: TiPunchLabs/flowforge/.github/workflows/review-cycle.yml@afa60c599fa47643bba45e26dad0e836b0375b69 # v0.1.0
     # Union of what the Reviewer and the Iterator request; each called job narrows it.
     #   contents: write        Iterator push job only (verified fast-forward to the PR branch)
     #   pull-requests: write   Reviewer publish job only (its single PR comment)
