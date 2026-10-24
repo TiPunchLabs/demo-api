@@ -6,7 +6,7 @@
 #     -f issue_number=<n> -f autonomy_mode=SUPERVISED|SEMI_AUTO -f allow_develop=false|true
 #
 # Differences from the FlowForge template (examples/target-repository/flowforge-refine.yml):
-# - pinned to FlowForge 7c4ebeb (main after PR #70: automatic review of a SEMI_AUTO delivery),
+# - pinned to FlowForge 88c2ae8 (main after PR #71: Refiner provenance fix, on top of PR #70),
 #   not a release;
 # - the autonomy mode is a dispatch input (default SUPERVISED) instead of the repository variable,
 #   so no repository variable is set and `main` stays SUPERVISED; the owner is fixed here, never an
@@ -38,7 +38,7 @@ permissions: {}
 
 jobs:
   refine:
-    uses: TiPunchLabs/flowforge/.github/workflows/agent-refine.yml@7c4ebeb1e4856c68a4f24bd54ffd3c06d84dcf73 # main after #70 (Phase 9 test pin)
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-refine.yml@88c2ae8f6f15f2d54589350540ea4e9644dd3f59 # main after #71 (Phase 9 test pin)
     # Must cover what the called workflow requests; it can only narrow, never widen.
     # Code stays read-only; the only writes are the Issue, its state label and one comment.
     permissions:
@@ -61,11 +61,11 @@ jobs:
       app_private_key: ${{ secrets.FLOWFORGE_APP_PRIVATE_KEY }}
 
   # SEMI_AUTO only: same job as flowforge-agent.yml on main (same permissions, inputs, secrets;
-  # agent-develop.yml at 7c4ebeb = v0.1.0 + the best-effort `head_sha` output of PR #70).
+  # agent-develop.yml at 88c2ae8 = v0.1.0 + the best-effort `head_sha` output of PR #70).
   develop:
     needs: refine
     if: needs.refine.outputs.autostart == 'true' && inputs.allow_develop
-    uses: TiPunchLabs/flowforge/.github/workflows/agent-develop.yml@7c4ebeb1e4856c68a4f24bd54ffd3c06d84dcf73 # main after #70 (Phase 9 test pin)
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-develop.yml@88c2ae8f6f15f2d54589350540ea4e9644dd3f59 # main after #71 (Phase 9 test pin)
     permissions:
       contents: write
       issues: write
@@ -92,7 +92,7 @@ jobs:
     if: >-
       needs.refine.outputs.autostart == 'true' && inputs.allow_develop
       && needs.develop.outputs.head_sha != '' && needs.develop.outputs.pull_request != ''
-    uses: TiPunchLabs/flowforge/.github/workflows/agent-review.yml@7c4ebeb1e4856c68a4f24bd54ffd3c06d84dcf73 # main after #70 (Phase 9 test pin)
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-review.yml@88c2ae8f6f15f2d54589350540ea4e9644dd3f59 # main after #71 (Phase 9 test pin)
     # Code stays read-only; the only write is the FlowForge comment on the PR.
     permissions:
       contents: read
