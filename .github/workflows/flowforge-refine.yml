@@ -1,18 +1,20 @@
 # TEMPORARY TEST CALLER — branch test/phase9-semi-auto-e2e only, never merged (FlowForge Phase 9,
-# Prompt 44.2). Delete the branch after the live validation; `main` keeps the v0.1.0 caller.
+# Prompts 44.2 and 45.1). Delete the branch after the live validation; `main` keeps the v0.1.0 caller.
 #
 # Hands one Issue to the FlowForge Refiner agent, on demand, from this branch:
 #   gh workflow run flowforge-refine.yml --ref test/phase9-semi-auto-e2e \
 #     -f issue_number=<n> -f autonomy_mode=SUPERVISED|SEMI_AUTO -f allow_develop=false|true
 #
 # Differences from the FlowForge template (examples/target-repository/flowforge-refine.yml):
-# - pinned to FlowForge 9338f25 (main after PR #69: SEMI_AUTO + gate fixes), not a release;
+# - pinned to FlowForge 7c4ebeb (main after PR #70: automatic review of a SEMI_AUTO delivery),
+#   not a release;
 # - the autonomy mode is a dispatch input (default SUPERVISED) instead of the repository variable,
 #   so no repository variable is set and `main` stays SUPERVISED; the owner is fixed here, never an
 #   input: a dispatcher cannot name themselves;
-# - `allow_develop` (default false) is a test-only kill switch: blocking scenarios run with it
-#   off, so even a wrong AUTO_START cannot start the Developer (the Issue would only get
-#   agent:ready, which triggers nothing when set with GITHUB_TOKEN).
+# - `allow_develop` (default false) is a test-only kill switch for both the develop and the review
+#   jobs: blocking scenarios run with it off, so even a wrong AUTO_START cannot start the Developer
+#   or the Reviewer (the Issue would only get agent:ready, which triggers nothing when set with
+#   GITHUB_TOKEN).
 name: FlowForge refine
 
 on:
@@ -28,7 +30,7 @@ on:
         options: [SUPERVISED, SEMI_AUTO]
         default: SUPERVISED
       allow_develop:
-        description: Let the develop job run on a verified AUTO_START (test kill switch)
+        description: Let the develop and review jobs run on a verified AUTO_START (test kill switch)
         type: boolean
         default: false
 
@@ -36,7 +38,7 @@ permissions: {}
 
 jobs:
   refine:
-    uses: TiPunchLabs/flowforge/.github/workflows/agent-refine.yml@9338f258b5c28831a109a46d61f2091e82e14381 # main after #69 (Phase 9 test pin)
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-refine.yml@7c4ebeb1e4856c68a4f24bd54ffd3c06d84dcf73 # main after #70 (Phase 9 test pin)
     # Must cover what the called workflow requests; it can only narrow, never widen.
     # Code stays read-only; the only writes are the Issue, its state label and one comment.
     permissions:
@@ -58,12 +60,12 @@ jobs:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       app_private_key: ${{ secrets.FLOWFORGE_APP_PRIVATE_KEY }}
 
-  # SEMI_AUTO only: same job as flowforge-agent.yml on main (same reusable workflow code —
-  # agent-develop.yml is unchanged between v0.1.0 and 9338f25 —, permissions, inputs, secrets).
+  # SEMI_AUTO only: same job as flowforge-agent.yml on main (same permissions, inputs, secrets;
+  # agent-develop.yml at 7c4ebeb = v0.1.0 + the best-effort `head_sha` output of PR #70).
   develop:
     needs: refine
     if: needs.refine.outputs.autostart == 'true' && inputs.allow_develop
-    uses: TiPunchLabs/flowforge/.github/workflows/agent-develop.yml@9338f258b5c28831a109a46d61f2091e82e14381 # main after #69 (Phase 9 test pin)
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-develop.yml@7c4ebeb1e4856c68a4f24bd54ffd3c06d84dcf73 # main after #70 (Phase 9 test pin)
     permissions:
       contents: write
       issues: write
@@ -75,6 +77,41 @@ jobs:
       allowed_tools: "Bash(uv sync:*),Bash(uv run pytest:*),Bash(uv run ruff:*),Bash(uv run pre-commit:*)"
       app_client_id: ${{ vars.FLOWFORGE_APP_CLIENT_ID }}
       project_number: ${{ fromJSON(vars.FLOWFORGE_PROJECT_NUMBER || '0') }}
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      app_private_key: ${{ secrets.FLOWFORGE_APP_PRIVATE_KEY }}
+
+  # SEMI_AUTO only: one review of the Draft PR the develop job above delivered, in the same run
+  # (FlowForge autonomy contract §14). Never `always()`: a failed or skipped develop skips it, and
+  # so does the kill switch. Runs only on a verified delivery (`head_sha` and `pull_request` set);
+  # agent-review.yml re-checks that exact delivery (branch, Issue, head commit, draft) and skips
+  # one already reviewed (NO_OP ALREADY_REVIEWED). Same job as flowforge-review.yml on main
+  # (permissions, setup_uv, allowed_tools, Project inputs, secrets).
+  review:
+    needs: [refine, develop]
+    if: >-
+      needs.refine.outputs.autostart == 'true' && inputs.allow_develop
+      && needs.develop.outputs.head_sha != '' && needs.develop.outputs.pull_request != ''
+    uses: TiPunchLabs/flowforge/.github/workflows/agent-review.yml@7c4ebeb1e4856c68a4f24bd54ffd3c06d84dcf73 # main after #70 (Phase 9 test pin)
+    # Code stays read-only; the only write is the FlowForge comment on the PR.
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: write
+      checks: read
+      statuses: read
+    with:
+      pull_request_number: ${{ fromJSON(needs.develop.outputs.pull_request) }}
+      expected_head_sha: ${{ needs.develop.outputs.head_sha }}
+      expected_head_branch: ${{ needs.develop.outputs.branch }}
+      expected_issue_number: ${{ fromJSON(inputs.issue_number) }}
+      setup_uv: true
+      # NON-DESTRUCTIVE checks only, as exact rules: a prefix rule such as
+      # "Bash(uv run ruff check:*)" would also allow --fix.
+      allowed_tools: "Bash(uv sync --locked),Bash(uv run pytest:*),Bash(uv run ruff check .),Bash(uv run ruff format --check .)"
+      # APPROVE moves the card Review -> Human validation; the App key only reaches the sync job.
+      project_number: ${{ fromJSON(vars.FLOWFORGE_PROJECT_NUMBER || '0') }}
+      app_client_id: ${{ vars.FLOWFORGE_APP_CLIENT_ID }}
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       app_private_key: ${{ secrets.FLOWFORGE_APP_PRIVATE_KEY }}
